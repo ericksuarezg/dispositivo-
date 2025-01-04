@@ -2,7 +2,7 @@
 #include <OneWire.h>
 #include <LcdSetUp.h>
 
-const int oneWireBus=33;
+const int oneWireBus=33; 
 OneWire oneWire(oneWireBus);
 DallasTemperature sensors(&oneWire);
 
@@ -10,8 +10,18 @@ DallasTemperature sensors(&oneWire);
 
 void ds18b20SetUp(SemaphoreHandle_t lcdSemaphore){
   sensors.begin();
-  displayInfoOnLCD("Setting up","ds18b20");
-  vTaskDelay(5000 / portTICK_PERIOD_MS);
+  displayInfoOnLCD("   Configurando","    ds18b20");
+  vTaskDelay(3000 / portTICK_PERIOD_MS);
+  // Verifica si hay sensores conectados
+  if (sensors.getDeviceCount() == 0) {
+    // Si no hay sensores, muestra un mensaje de error en el LCD
+    displayInfoOnLCD(     "Error:", "No DS18B20 found");
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+  } else {
+    // Si el sensor está conectado, muestra un mensaje de configuración
+    displayInfoOnLCD(" Sensor DS18B20", "OK");
+    vTaskDelay(5000 / portTICK_PERIOD_MS);  // Espera 5 segundos
+  }
   xSemaphoreGive(lcdSemaphore);
 }
 

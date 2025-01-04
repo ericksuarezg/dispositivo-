@@ -5,7 +5,7 @@
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-const char * mqtt_server= "23.239.4.166";
+const char * mqtt_server= "aguisu.com";
 const char* mqtt_user = "Termo5263";
 const char* mqtt_password = "Termo1234";
 const char* mqtt_client_id = "6679e920f060820300eb69e4";
@@ -37,9 +37,11 @@ void reconnect(SemaphoreHandle_t lcdSemaphore) {
       if (client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
         Serial.println("Conectado al servidor MQTT!");
         mqttConnected = true;
-        client.subscribe("Termo5263");
+        client.subscribe(mqtt_user);
         xSemaphoreTake(lcdSemaphore, portMAX_DELAY);
-        displayInfoOnLCD("WiFi: Conectado", "MQTT: Conectado");
+        displayInfoOnLCD("   Intentando"," coneccion MQTT");
+        vTaskDelay(3000/ portTICK_PERIOD_MS);
+        displayInfoOnLCD("   Conectado a",  mqtt_server);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         xSemaphoreGive(lcdSemaphore); 
       } else {
@@ -47,7 +49,7 @@ void reconnect(SemaphoreHandle_t lcdSemaphore) {
         Serial.print(client.state());
         Serial.println(" Intentando nuevamente en 5 segundos...");
         xSemaphoreTake(lcdSemaphore, portMAX_DELAY);
-        displayInfoOnLCD("WiFi: Conectado", "MQTT: Desconectado");
+        displayInfoOnLCD("intentando MQTT","nuevamente en 5 seg");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         xSemaphoreGive(lcdSemaphore);
       }
@@ -69,18 +71,20 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
   //reconnect(lcdSemaphore);
   while (!client.connected()) {
     Serial.print("Intentando conexión al servidor MQTT...");
+    displayInfoOnLCD("   Intentando"," coneccion MQTT");
+    vTaskDelay(3000/ portTICK_PERIOD_MS);
     if (client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
       Serial.println("Conectado al servidor MQTT!");
       mqttConnected = true;
-      client.subscribe("Termo5263");
-      displayInfoOnLCD("WiFi: Conectado", "MQTT: Conectado");
+      client.subscribe(mqtt_user);
+      displayInfoOnLCD("   Conectado a",  mqtt_server);
       vTaskDelay(5000 / portTICK_PERIOD_MS);
       xSemaphoreGive(lcdSemaphore); 
     } else {
       Serial.print("Fallo, rc=");
       Serial.print(client.state());
       Serial.println(" Intentando nuevamente en 5 segundos...");
-      displayInfoOnLCD("WiFi: Conectado", "MQTT: Desconectado");
+      displayInfoOnLCD("intentando MQTT","nuevamente en 5 seg");
       vTaskDelay(5000 / portTICK_PERIOD_MS);
       xSemaphoreGive(lcdSemaphore);
     }
@@ -92,7 +96,7 @@ void publishData(SemaphoreHandle_t lcdSemaphore, float temperaturaDHT,float hume
   DynamicJsonDocument jsonDoc(256); // Ajusta el tamaño según sea necesario
 
   jsonDoc["typeMessage"] = "messageCurrent";
-  jsonDoc["deviceId"] = "6679e920f060820300eb69e4";
+  jsonDoc["deviceId"] = mqtt_client_id;
   //jsonDoc["deviceId"] = "65d1689bf8f75e518b8057a7b";
  // jsonDoc["deviceId"] = "65d1689bf8f75e518b8057a7b";
   JsonObject data = jsonDoc.createNestedObject("data");
@@ -118,7 +122,7 @@ void publishData(SemaphoreHandle_t lcdSemaphore, float temperaturaDHT,float hume
   serializeJson(jsonDoc, jsonString);
 
   // Publicar el mensaje en el tema deseado
-  client.publish("6679e920f060820300eb69e4", jsonString.c_str());
+  client.publish(mqtt_client_id, jsonString.c_str());
   displayInfoOnLCD("La data ha sido","     enviada    ");
   vTaskDelay(5000 / portTICK_PERIOD_MS);
   xSemaphoreGive(lcdSemaphore);

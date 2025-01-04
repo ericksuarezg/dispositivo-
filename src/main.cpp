@@ -38,7 +38,7 @@ void Task2(void *pvParameters) {
     ds18b20SetUp(lcdSemaphore);
 
     unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 30000;
+    unsigned long publishInterval = 30000; 
     while (true) {
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
@@ -52,7 +52,7 @@ void Task2(void *pvParameters) {
 }
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(9600); 
     // Crear las tareas
     // Crear el semáforo
     wifiSemaphore = xSemaphoreCreateBinary();
