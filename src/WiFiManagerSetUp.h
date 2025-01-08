@@ -4,5 +4,6 @@
 #include <freertos/semphr.h> 
 void setUpWifi(SemaphoreHandle_t wifiSemaphore,SemaphoreHandle_t lcdSemaphore);
 void reconectWiFi(SemaphoreHandle_t lcdSemaphore);
+bool isWiFiConnected();
 
 #endif
