@@ -32,27 +32,41 @@ void reconnect(SemaphoreHandle_t lcdSemaphore) {
   Serial.print("el estado de la conexion mqtt es ");
   Serial.print(client.state());
   if (client.state()!=MQTT_CONNECTED) {
+    float currentTime= millis();
+    float temporiTime=30000;
     while (!client.connected()) {
-      Serial.print("Intentando conexión al servidor MQTT...");
-      if (client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
-        Serial.println("Conectado al servidor MQTT!");
-        mqttConnected = true;
-        client.subscribe(mqtt_user);
-        xSemaphoreTake(lcdSemaphore, portMAX_DELAY);
-        displayInfoOnLCD("   Intentando"," coneccion MQTT");
-        vTaskDelay(3000/ portTICK_PERIOD_MS);
-        displayInfoOnLCD("   Conectado a",  mqtt_server);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        xSemaphoreGive(lcdSemaphore); 
-      } else {
-        Serial.print("Fallo, rc=");
-        Serial.print(client.state());
-        Serial.println(" Intentando nuevamente en 5 segundos...");
-        xSemaphoreTake(lcdSemaphore, portMAX_DELAY);
-        displayInfoOnLCD("intentando MQTT","nuevamente en 5 seg");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        xSemaphoreGive(lcdSemaphore);
+      if((millis()-currentTime)>=temporiTime){
+        if (xSemaphoreTake(lcdSemaphore,3000/ portMAX_DELAY) == pdTRUE){
+          displayInfoOnLCD(" Tiempo agotado"," conexion MQTT");
+          vTaskDelay(5000 / portTICK_PERIOD_MS);
+          displayInfoOnLCD("Reintento en ..."," 30 segundos...");
+          vTaskDelay(5000 / portTICK_PERIOD_MS);
+          xSemaphoreGive(lcdSemaphore);   
+        }
+        return; 
       }
+      if (xSemaphoreTake(lcdSemaphore, portMAX_DELAY) == pdTRUE) {  
+        Serial.print("Intentando conexión al servidor MQTT...");
+        if (client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
+          Serial.println("Conectado al servidor MQTT!");
+          mqttConnected = true;
+          client.subscribe(mqtt_user);
+          displayInfoOnLCD("   Intentando"," coneccion MQTT");
+          vTaskDelay(3000/ portTICK_PERIOD_MS);
+          displayInfoOnLCD("   Conectado a",  mqtt_server);
+          vTaskDelay(5000 / portTICK_PERIOD_MS);
+          xSemaphoreGive(lcdSemaphore); 
+          vTaskDelay(5000 / portTICK_PERIOD_MS);
+        } else {
+          Serial.print("Fallo, rc=");
+          Serial.print(client.state());
+          Serial.println(" Intentando nuevamente en 5 segundos...");
+          displayInfoOnLCD("intentando MQTT","nuevamente en 5 seg");
+          vTaskDelay(5000 / portTICK_PERIOD_MS);
+          xSemaphoreGive(lcdSemaphore);
+          vTaskDelay(5000 / portTICK_PERIOD_MS);
+        }
+      }  
     }
   } else {
     Serial.println("MQTT ya estaba conectado.");
@@ -113,17 +127,23 @@ void publishData(SemaphoreHandle_t lcdSemaphore, float temperaturaDHT,float hume
   const char* temperatureDTH = body[0];
   const char* humidity = body[1];
   const char* temperatureDs18= body[2];
-  // Mostrar los datos en el LCD
-  xSemaphoreTake(lcdSemaphore, portMAX_DELAY);
-  displayDataOnLCD(temperaturaDHT,humedadRelativa,temperaturaDS18);
-  
+
   // Serializar el JSON a una cadena
   String jsonString;
   serializeJson(jsonDoc, jsonString);
-
   // Publicar el mensaje en el tema deseado
   client.publish(mqtt_client_id, jsonString.c_str());
-  displayInfoOnLCD("La data ha sido","     enviada    ");
-  vTaskDelay(5000 / portTICK_PERIOD_MS);
-  xSemaphoreGive(lcdSemaphore);
+  // Mostrar los datos en el LCD
+  if (xSemaphoreTake(lcdSemaphore, 3000/ portMAX_DELAY)==pdTRUE)
+  {
+    displayDataOnLCD(temperaturaDHT,humedadRelativa,temperaturaDS18);
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    displayInfoOnLCD("La data ha sido","     enviada    ");
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    xSemaphoreGive(lcdSemaphore);
+  }
+}
+
+bool isMQTTConnected() {
+    return client.connected();
 }

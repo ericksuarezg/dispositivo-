@@ -40,14 +40,16 @@ void Task2(void *pvParameters) {
     unsigned long lastPublishTime = millis();
     unsigned long publishInterval = 30000; 
     while (true) {
+        vTaskDelay(2000 / portTICK_PERIOD_MS);  // Espera de 2 segundos
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
-        if (millis() - lastPublishTime >= publishInterval) {
-          publishData(lcdSemaphore, temperaturaDHT, humedad, temperatureCDs18b20);  
-          lastPublishTime = millis();  
+        if (isWiFiConnected() && isMQTTConnected()) {
+            if (millis() - lastPublishTime >= publishInterval) {
+                publishData(lcdSemaphore, temperaturaDHT, humedad, temperatureCDs18b20);  
+                lastPublishTime = millis();  
+            }
         }
-        vTaskDelay(2000 / portTICK_PERIOD_MS);  // Espera de 2 segundos
     }    
 }
 

@@ -8,6 +8,7 @@ DallasTemperature sensors(&oneWire);
 
 
 
+
 void ds18b20SetUp(SemaphoreHandle_t lcdSemaphore){
   sensors.begin();
   displayInfoOnLCD("   Configurando","    ds18b20");
@@ -28,10 +29,11 @@ void ds18b20SetUp(SemaphoreHandle_t lcdSemaphore){
 void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore,float &temperatureCDs18b20){
   sensors.requestTemperatures();
   temperatureCDs18b20 = sensors.getTempCByIndex(0);
-  xSemaphoreTake(lcdSemaphore,portMAX_DELAY);
-  displayDataOnLCDofDbs18b20(temperatureCDs18b20);
-  Serial.print(temperatureCDs18b20);
-  Serial.println("ºC");
-  vTaskDelay(5000 / portTICK_PERIOD_MS);
-  xSemaphoreGive(lcdSemaphore);
+  if (xSemaphoreTake(lcdSemaphore,5000 / portMAX_DELAY)==pdTRUE){
+    displayDataOnLCDofDbs18b20(temperatureCDs18b20);
+    Serial.print(temperatureCDs18b20);
+    Serial.println("ºC");
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    xSemaphoreGive(lcdSemaphore);
+  } 
 }
