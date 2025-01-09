@@ -107,12 +107,19 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
 
 void publishData(SemaphoreHandle_t lcdSemaphore, float temperaturaDHT,float humedadRelativa, float temperaturaDS18) {
   // Crear un objeto JSON para almacenar los datos
+  Serial.print(temperaturaDS18);
+  delay(5000);
+  if (isnan(temperaturaDHT) || isnan(humedadRelativa) || isnan(temperaturaDS18) || temperaturaDS18==-127) {
+    Serial.println("Error: Datos inválidos. No se publicará información.");
+    if (xSemaphoreTake(lcdSemaphore, portMAX_DELAY) == pdTRUE) {
+       displayInfoOnLCD("Error publicación", "Datos no válidos");
+       xSemaphoreGive(lcdSemaphore);
+    }
+    return; 
+  }
   DynamicJsonDocument jsonDoc(256); // Ajusta el tamaño según sea necesario
-
   jsonDoc["typeMessage"] = "messageCurrent";
   jsonDoc["deviceId"] = mqtt_client_id;
-  //jsonDoc["deviceId"] = "65d1689bf8f75e518b8057a7b";
- // jsonDoc["deviceId"] = "65d1689bf8f75e518b8057a7b";
   JsonObject data = jsonDoc.createNestedObject("data");
   JsonArray header = data.createNestedArray("header");
   header.add("temperatura dth22");
