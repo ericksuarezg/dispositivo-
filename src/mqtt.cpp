@@ -5,10 +5,10 @@
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-const char * mqtt_server= "aguisu.com";
-const char* mqtt_user = "Termo5263";
-const char* mqtt_password = "Termo1234";
-const char* mqtt_client_id = "6679e920f060820300eb69e4";
+const char * mqtt_server= "goblue.com.co";
+const char* mqtt_user = "Equipo01";
+const char* mqtt_password = "Device01";
+const char* mqtt_client_id = "677ebe3f7fc72fa1fe5a2fde";
 const int mqtt_port = 7080;
 
 
