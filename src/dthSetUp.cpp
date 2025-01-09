@@ -1,8 +1,11 @@
 #include <DHT.h> 
 #include <LcdSetUp.h>
 #define DHT_PIN 32
+
+static bool dhtConfigured = false;
 DHT dht(DHT_PIN, DHT22); 
-void dthSensorsetUp (){
+
+bool dthSensorsetUp (){
    displayInfoOnLCD("  Configurando","     DHT22");
    vTaskDelay(3000/ portTICK_PERIOD_MS);
    dht.begin();
@@ -12,6 +15,10 @@ void dthSensorsetUp (){
    if (isnan(humidity) || isnan(temperature)) {
      // Error al leer el sensor
      displayInfoOnLCD("Error:", "Sensor DHT22");
+     Serial.println("Error: No se pudo configurar el sensor DHT22.");
+     dhtConfigured = false;
+     vTaskDelay(5000 / portTICK_PERIOD_MS);
+     return false;
    } else {
      // Sensor funcionando correctamente, muestra los datos
      displayInfoOnLCD("Sensor DTH","OK");
@@ -23,10 +30,35 @@ void dthSensorsetUp (){
      char termicSen[16];
      snprintf(termicSen, sizeof(termicSen), "%.1f C", heatIndex);
      displayInfoOnLCD("Sens. termica de",termicSen);
+     dhtConfigured = true;
+     vTaskDelay(5000 / portTICK_PERIOD_MS);
+     return true;
    }
-   vTaskDelay(5000 / portTICK_PERIOD_MS);
+  
 }
 void dhtReading(SemaphoreHandle_t lcdSemaphore,float &temperaturaDHT, float &humedad) {
+    if (!dhtConfigured) {
+      Serial.println("Sensor DHT22 no configurado. Intentando configurar nuevamente.");
+      if (xSemaphoreTake(lcdSemaphore,3000 / portMAX_DELAY)==pdTRUE){
+        dhtConfigured = dthSensorsetUp();
+        xSemaphoreGive(lcdSemaphore);
+      }
+      if (!dhtConfigured)
+      {
+        Serial.println("Error: No se pudo configurar el sensor DHT22.");
+        temperaturaDHT = NAN;
+        humedad = NAN; // Valores no válidos para indicar error
+        return;
+      }else{
+        if (xSemaphoreTake(lcdSemaphore,3000 / portMAX_DELAY)==pdTRUE)
+        {
+         displayInfoOnLCD(" Config exitosa", "de sensor DTH22");
+         vTaskDelay(3000 / portTICK_PERIOD_MS);
+         xSemaphoreGive(lcdSemaphore);
+         return;
+        }
+      }
+    }  
     temperaturaDHT = dht.readTemperature();
     humedad = dht.readHumidity();
     Serial.print(temperaturaDHT);
