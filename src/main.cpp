@@ -6,6 +6,7 @@
 #include <ds18b20SetUp.h>
 #include "freertos/semphr.h"
 
+
 // Definir los "handle" de las tareas
 TaskHandle_t Task1Handle = NULL;
 TaskHandle_t Task2Handle = NULL;

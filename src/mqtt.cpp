@@ -2,6 +2,7 @@
 #include <PubSubClient.h>
 #include <LcdSetup.h>
 #include <ArduinoJson.h>
+#include <WiFiManagerSetUp.h>
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -32,20 +33,8 @@ void reconnect(SemaphoreHandle_t lcdSemaphore) {
   Serial.print("el estado de la conexion mqtt es ");
   Serial.print(client.state());
   if (client.state()!=MQTT_CONNECTED) {
-    float currentTime= millis();
-    float temporiTime=30000;
-    while (!client.connected()) {
-      if((millis()-currentTime)>=temporiTime){
-        if (xSemaphoreTake(lcdSemaphore,3000/ portMAX_DELAY) == pdTRUE){
-          displayInfoOnLCD(" Tiempo agotado"," conexion MQTT");
-          vTaskDelay(5000 / portTICK_PERIOD_MS);
-          displayInfoOnLCD("Reintento en ..."," 30 segundos...");
-          vTaskDelay(5000 / portTICK_PERIOD_MS);
-          xSemaphoreGive(lcdSemaphore);   
-        }
-        return; 
-      }
-      if (xSemaphoreTake(lcdSemaphore, portMAX_DELAY) == pdTRUE) {  
+    if (!client.connected() && isWiFiConnected()) {
+      if (xSemaphoreTake(lcdSemaphore, 5000/ portMAX_DELAY) == pdTRUE) {  
         Serial.print("Intentando conexión al servidor MQTT...");
         if (client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
           Serial.println("Conectado al servidor MQTT!");
@@ -55,17 +44,20 @@ void reconnect(SemaphoreHandle_t lcdSemaphore) {
           vTaskDelay(3000/ portTICK_PERIOD_MS);
           displayInfoOnLCD("   Conectado a",  mqtt_server);
           vTaskDelay(5000 / portTICK_PERIOD_MS);
-          xSemaphoreGive(lcdSemaphore); 
-          vTaskDelay(5000 / portTICK_PERIOD_MS);
+          //xSemaphoreGive(lcdSemaphore); 
+          //vTaskDelay(5000 / portTICK_PERIOD_MS);
         } else {
           Serial.print("Fallo, rc=");
           Serial.print(client.state());
           Serial.println(" Intentando nuevamente en 5 segundos...");
-          displayInfoOnLCD("intentando MQTT","nuevamente en 5 seg");
+          displayInfoOnLCD("intentando MQTT","nuevamente en 7 seg");
           vTaskDelay(5000 / portTICK_PERIOD_MS);
-          xSemaphoreGive(lcdSemaphore);
-          vTaskDelay(5000 / portTICK_PERIOD_MS);
+          //xSemaphoreGive(lcdSemaphore);
+          //vTaskDelay(5000 / portTICK_PERIOD_MS);
         }
+        xSemaphoreGive(lcdSemaphore);
+        vTaskDelay(25000 / portTICK_PERIOD_MS);
+
       }  
     }
   } else {
@@ -83,7 +75,7 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
   //reconnect(lcdSemaphore);
-  while (!client.connected()) {
+  if (!client.connected() && isWiFiConnected()) {
     Serial.print("Intentando conexión al servidor MQTT...");
     displayInfoOnLCD("   Intentando"," coneccion MQTT");
     vTaskDelay(3000/ portTICK_PERIOD_MS);
