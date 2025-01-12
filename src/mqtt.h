@@ -5,3 +5,4 @@ void reconnect(SemaphoreHandle_t lcdSemaphore);
 void CheckForMessages();
 void publishData(SemaphoreHandle_t lcdSemaphore, float temperaturaDHT,float humedadRelativa, float temperaturaDS18);
 bool isMQTTConnected();
+void storagePublishData(float temperaturaDHT,float humedadRelativa, float temperaturaDS18);

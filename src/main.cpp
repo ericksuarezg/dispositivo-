@@ -5,6 +5,8 @@
 #include <dthSetUp.h>
 #include <ds18b20SetUp.h>
 #include "freertos/semphr.h"
+#include <storage.h>
+
 
 
 // Definir los "handle" de las tareas
@@ -25,15 +27,17 @@ void conectToInternet(void *pvParameters) {
         reconectWiFi(lcdSemaphore);
         reconnect(lcdSemaphore);
         CheckForMessages();
-        vTaskDelay(3000 / portTICK_PERIOD_MS);  // Espera de 1 segundo
+        vTaskDelay(30000 / portTICK_PERIOD_MS);  // Espera de 1 segundo
     }
 }
+
 
 // Función para la segunda tarea
 void Task2(void *pvParameters) {
     float temperaturaDHT;
     float humedad;
     float temperatureCDs18b20;
+    setupSPIFFS();
     setUpLcd(wifiSemaphore);
     dthSensorsetUp();
     ds18b20SetUp(lcdSemaphore);
@@ -45,12 +49,15 @@ void Task2(void *pvParameters) {
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
+        //saveDataToCSV(temperaturaDHT,humedad,temperatureCDs18b20,publishInterval);
         if (isWiFiConnected() && isMQTTConnected()) {
             if (millis() - lastPublishTime >= publishInterval) {
+                //sendStoredData(lcdSemaphore);
                 publishData(lcdSemaphore, temperaturaDHT, humedad, temperatureCDs18b20);  
                 lastPublishTime = millis();  
             }
         }
+        vTaskDelay(100 / portTICK_PERIOD_MS);  
     }    
 }
 
@@ -76,8 +83,8 @@ void setup() {
         "Tarea 2",       // Nombre de la tarea
         5000,            // Tamaño de la pila
         NULL,            // Parámetros de la tarea
-        1,               // Prioridad de la tarea
-        &Task2Handle,0);   // Handle de la tarea
+        2,               // Prioridad de la tarea
+        &Task2Handle,0);   // Handle de la tarea 
 }
 
 void loop() {

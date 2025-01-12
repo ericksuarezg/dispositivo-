@@ -6,7 +6,7 @@
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-const char * mqtt_server= "aguisu.com";
+const char * mqtt_server= "maguisu.com";
 const char* mqtt_user = "Termo5263";
 const char* mqtt_password = "Termo1234";
 const char* mqtt_client_id = "6679e920f060820300eb69e4";
@@ -145,4 +145,38 @@ void publishData(SemaphoreHandle_t lcdSemaphore, float temperaturaDHT,float hume
 
 bool isMQTTConnected() {
     return client.connected();
+}
+
+void storagePublishData(float temperaturaDHT,float humedadRelativa, float temperaturaDS18) {
+  // Crear un objeto JSON para almacenar los datos
+  Serial.print(temperaturaDS18);
+  delay(5000);
+  if (isnan(temperaturaDHT) || isnan(humedadRelativa) || isnan(temperaturaDS18) || temperaturaDS18==-127) {
+    Serial.println("Error: Datos inválidos. No se publicará información.");
+    return; 
+  }
+  DynamicJsonDocument jsonDoc(256); // Ajusta el tamaño según sea necesario
+  jsonDoc["typeMessage"] = "messageCurrent";
+  jsonDoc["deviceId"] = mqtt_client_id;
+  JsonObject data = jsonDoc.createNestedObject("data");
+  JsonArray header = data.createNestedArray("header");
+  header.add("temperatura dth22");
+  header.add("humedad Relativa");
+  header.add("temperatura ds18b20");
+  JsonArray body = data.createNestedArray("body");
+  body.add(temperaturaDHT);
+  body.add(humedadRelativa);
+  body.add(temperaturaDS18);
+
+  // Obtener los datos de temperatura y humedad
+  const char* temperatureDTH = body[0];
+  const char* humidity = body[1];
+  const char* temperatureDs18= body[2];
+
+  // Serializar el JSON a una cadena
+  String jsonString;
+  serializeJson(jsonDoc, jsonString);
+  // Publicar el mensaje en el tema deseado
+  client.publish(mqtt_client_id, jsonString.c_str());
+  // Mostrar los datos en el LCD
 }
