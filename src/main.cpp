@@ -3,7 +3,8 @@
 #include <LcdSetUp.h>
 #include <mqtt.h> 
 #include <dthSetUp.h>
-#include <ds18b20SetUp.h>
+#include <ds18b20SetUp.h> 
+#include <timeSetUp.h>
 #include "freertos/semphr.h"
 
 
@@ -45,13 +46,16 @@ void Task2(void *pvParameters) {
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
+        updateClockDisplay(); // Devuelve la hora basada en millis
+
         if (isWiFiConnected() && isMQTTConnected()) {
             if (millis() - lastPublishTime >= publishInterval) {
                 publishData(lcdSemaphore, temperaturaDHT, humedad, temperatureCDs18b20);  
                 lastPublishTime = millis();  
             }
         }
-    }    
+    } 
+       
 }
 
 void setup() {

@@ -2,20 +2,22 @@
 #include <PubSubClient.h>
 #include <LcdSetup.h>
 #include <ArduinoJson.h>
-#include <WiFiManagerSetUp.h>
+#include <WiFiManagerSetUp.h> 
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-const char * mqtt_server= "aguisu.com";
-const char* mqtt_user = "Termo5263";
-const char* mqtt_password = "Termo1234";
-const char* mqtt_client_id = "6679e920f060820300eb69e4";
+
+//const char * mqtt_server= "192.168.18.10";// local
+const char * mqtt_server= "goblue.com.co";
+const char* mqtt_user = "Equipo01";
+const char* mqtt_password = "Device01";
+const char* mqtt_client_id = "677ebe3f7fc72fa1fe5a2fde";
 const int mqtt_port = 7080;
+//const int mqtt_port = 3251; // puerto local
+
 
 
 bool mqttConnected = false;
-
-
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println("Mensaje recibido en el tópico: " + String(topic));

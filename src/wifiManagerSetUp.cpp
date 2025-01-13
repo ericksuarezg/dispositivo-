@@ -2,6 +2,8 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include "LcdSetup.h"
+#include "timeSetUp.h"
+
 bool wifiConnected = false;
 WiFiManager wifiManager;
 
@@ -12,13 +14,17 @@ void setUpWifi(SemaphoreHandle_t wifiSemaphore,SemaphoreHandle_t lcdSemaphore) {
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   wifiManager.setTimeout(60);
   if (wifiManager.autoConnect("ESP32-Config")) {
-    Serial.print("Potencia de transmisión WiFi: ");
+    Serial.print("Potencia de transmisión WiFi: "); 
     Serial.println(WiFi.RSSI());
     Serial.println("Conectado a WiFi!");
     String ssid = WiFi.SSID(); // Obtiene el nombre de la red
     displayInfoOnLCD(ssid.c_str(), ("RSSI: " + String(WiFi.RSSI())).c_str());
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     displayInfoOnLCD("wifi:conectado", WiFi.RSSI() == 0 ? "RSSI: 0" : String(WiFi.RSSI()).c_str());
+    localTimeSetUp(); //configura la hora local
+    getAdjustedTime(); // Devuelve la hora ajustada segun millis
+    updateClockDisplay();  //Devuelve hora sincronizada
+
     wifiConnected = true;
   }else{
     Serial.println("Tiempo de espera agotado para conectar a WiFi");
@@ -39,6 +45,10 @@ void reconectWiFi(SemaphoreHandle_t lcdSemaphore) {
       if (wifiConnected) {
         Serial.println("Reconexión exitosa desde reconectWiFi.");
         displayInfoOnLCD("Reconectado", "WiFi exitoso");
+        localTimeSetUp(); //configura la hora local
+        getAdjustedTime(); // Devuelve la hora ajustada segun millis
+        updateClockDisplay(); // Devuelve la hora basada en millis
+
       } else {
         Serial.println("Falló la reconexión desde reconectWiFi.");
         displayInfoOnLCD("Reconexión fallida", "Intentando luego...");
