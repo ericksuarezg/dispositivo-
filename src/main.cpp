@@ -27,7 +27,7 @@ void conectToInternet(void *pvParameters) {
         reconectWiFi(lcdSemaphore);
         reconnect(lcdSemaphore);
         CheckForMessages();
-        vTaskDelay(30000 / portTICK_PERIOD_MS);  // Espera de 1 segundo
+        vTaskDelay(1000 / portTICK_PERIOD_MS);  // Espera de 1 segundo
     }
 }
 
@@ -49,15 +49,15 @@ void Task2(void *pvParameters) {
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
-        //saveDataToCSV(temperaturaDHT,humedad,temperatureCDs18b20,publishInterval);
+        saveDataToCSV(temperaturaDHT,humedad,temperatureCDs18b20,publishInterval);
         if (isWiFiConnected() && isMQTTConnected()) {
             if (millis() - lastPublishTime >= publishInterval) {
-                //sendStoredData(lcdSemaphore);
-                publishData(lcdSemaphore, temperaturaDHT, humedad, temperatureCDs18b20);  
+                sendStoredData(lcdSemaphore);
+                //publishData(lcdSemaphore, temperaturaDHT, humedad, temperatureCDs18b20);  
                 lastPublishTime = millis();  
             }
         }
-        vTaskDelay(100 / portTICK_PERIOD_MS);  
+        vTaskDelay(1000 / portTICK_PERIOD_MS) ;  
     }    
 }
 
