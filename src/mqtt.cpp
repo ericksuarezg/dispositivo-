@@ -33,32 +33,30 @@ void reconnect(SemaphoreHandle_t lcdSemaphore) {
   Serial.print("el estado de la conexion mqtt es ");
   Serial.print(client.state());
   if (client.state()!=MQTT_CONNECTED) {
-    if (!client.connected() && isWiFiConnected()) {
-      if (xSemaphoreTake(lcdSemaphore, 5000/ portMAX_DELAY) == pdTRUE) {  
-        Serial.print("Intentando conexión al servidor MQTT...");
+    if (!client.connected()  && isWiFiConnected() ) {
+      Serial.print("Intentando conexión al servidor MQTT...");
         if (client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
           Serial.println("Conectado al servidor MQTT!");
           mqttConnected = true;
           client.subscribe(mqtt_user);
-          displayInfoOnLCD("   Intentando"," coneccion MQTT");
-          vTaskDelay(3000/ portTICK_PERIOD_MS);
-          displayInfoOnLCD("   Conectado a",  mqtt_server);
-          vTaskDelay(5000 / portTICK_PERIOD_MS);
-          //xSemaphoreGive(lcdSemaphore); 
-          //vTaskDelay(5000 / portTICK_PERIOD_MS);
+          if (xSemaphoreTake(lcdSemaphore,2000/portTICK_PERIOD_MS)==pdTRUE){
+            displayInfoOnLCD("   Intentando"," coneccion MQTT");
+            vTaskDelay(2000/ portTICK_PERIOD_MS);
+            displayInfoOnLCD("   Conectado a",  mqtt_server);
+            vTaskDelay(2000 / portTICK_PERIOD_MS);
+            xSemaphoreGive(lcdSemaphore); 
+          }
         } else {
           Serial.print("Fallo, rc=");
           Serial.print(client.state());
           Serial.println(" Intentando nuevamente en 5 segundos...");
-          displayInfoOnLCD("intentando MQTT","nuevamente en 7 seg");
-          vTaskDelay(5000 / portTICK_PERIOD_MS);
-          //xSemaphoreGive(lcdSemaphore);
-          //vTaskDelay(5000 / portTICK_PERIOD_MS);
+          if (xSemaphoreTake(lcdSemaphore,5000/portTICK_PERIOD_MS)==pdTRUE){
+            displayInfoOnLCD("intentando MQTT","nuevamente en 7 seg");
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
+            xSemaphoreGive(lcdSemaphore);
+          }
         }
-        xSemaphoreGive(lcdSemaphore);
-        vTaskDelay(25000 / portTICK_PERIOD_MS);
-
-      }  
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
   } else {
     Serial.println("MQTT ya estaba conectado.");
@@ -66,6 +64,7 @@ void reconnect(SemaphoreHandle_t lcdSemaphore) {
     //vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
+ 
 
 void CheckForMessages(){
   client.loop();
@@ -74,8 +73,7 @@ void CheckForMessages(){
 void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
-  //reconnect(lcdSemaphore);
-  if (!client.connected() && isWiFiConnected()) {
+  if (!client.connected() && isWiFiConnected() ) {
     Serial.print("Intentando conexión al servidor MQTT...");
     displayInfoOnLCD("   Intentando"," coneccion MQTT");
     vTaskDelay(3000/ portTICK_PERIOD_MS);
@@ -145,4 +143,38 @@ void publishData(SemaphoreHandle_t lcdSemaphore, float temperaturaDHT,float hume
 
 bool isMQTTConnected() {
     return client.connected();
+}
+
+void storagePublishData(float temperaturaDHT,float humedadRelativa, float temperaturaDS18) {
+  // Crear un objeto JSON para almacenar los datos
+  Serial.print(temperaturaDS18);
+  delay(1000);
+  if (isnan(temperaturaDHT) || isnan(humedadRelativa) || isnan(temperaturaDS18) || temperaturaDS18==-127) {
+    Serial.println("Error: Datos inválidos. No se publicará información.");
+    return; 
+  }
+  DynamicJsonDocument jsonDoc(256); // Ajusta el tamaño según sea necesario
+  jsonDoc["typeMessage"] = "messageCurrent";
+  jsonDoc["deviceId"] = mqtt_client_id;
+  JsonObject data = jsonDoc.createNestedObject("data");
+  JsonArray header = data.createNestedArray("header");
+  header.add("temperatura dth22");
+  header.add("humedad Relativa");
+  header.add("temperatura ds18b20");
+  JsonArray body = data.createNestedArray("body");
+  body.add(temperaturaDHT);
+  body.add(humedadRelativa);
+  body.add(temperaturaDS18);
+
+  // Obtener los datos de temperatura y humedad
+  const char* temperatureDTH = body[0];
+  const char* humidity = body[1];
+  const char* temperatureDs18= body[2];
+
+  // Serializar el JSON a una cadena
+  String jsonString;
+  serializeJson(jsonDoc, jsonString);
+  // Publicar el mensaje en el tema deseado
+  client.publish(mqtt_client_id, jsonString.c_str());
+  // Mostrar los datos en el LCD
 }
