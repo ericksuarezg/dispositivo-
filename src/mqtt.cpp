@@ -1,4 +1,4 @@
-#include <WiFiManager.h>
+/* #include <WiFiManager.h>
 #include <PubSubClient.h>
 #include <LcdSetup.h>
 #include <ArduinoJson.h>
@@ -64,7 +64,8 @@ void reconnect(SemaphoreHandle_t lcdSemaphore) {
     //vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
- 
+  
+
 
 void CheckForMessages(){
   client.loop();
@@ -73,6 +74,8 @@ void CheckForMessages(){
 void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
+  client.setKeepAlive(60); // Configura un Keep-Alive de 60 segundos
+
   if (!client.connected() && isWiFiConnected() ) {
     Serial.print("Intentando conexión al servidor MQTT...");
     displayInfoOnLCD("   Intentando"," coneccion MQTT");
@@ -148,7 +151,7 @@ bool isMQTTConnected() {
 void storagePublishData(float temperaturaDHT,float humedadRelativa, float temperaturaDS18) {
   // Crear un objeto JSON para almacenar los datos
   Serial.print(temperaturaDS18);
-  delay(1000);
+  delay(10);
   if (isnan(temperaturaDHT) || isnan(humedadRelativa) || isnan(temperaturaDS18) || temperaturaDS18==-127) {
     Serial.println("Error: Datos inválidos. No se publicará información.");
     return; 
@@ -177,4 +180,4 @@ void storagePublishData(float temperaturaDHT,float humedadRelativa, float temper
   // Publicar el mensaje en el tema deseado
   client.publish(mqtt_client_id, jsonString.c_str());
   // Mostrar los datos en el LCD
-}
+} */
