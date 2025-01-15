@@ -6,6 +6,6 @@
 
 
 void setupSPIFFS(); 
-void saveDataToCSV(float tempDHT, float humedad, float tempDS18B20, unsigned long timestamp);
+void saveDataToCSV(float tempDHT, float humedad, float tempDS18B20, unsigned long timestamp, int toSend);
 void sendStoredData(SemaphoreHandle_t lcdSemaphore);
-#endif 
+#endif , 
