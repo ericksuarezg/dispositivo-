@@ -1,12 +1,13 @@
 #include <Arduino.h>
 #include <WiFiManagerSetUp.h>
 #include <LcdSetUp.h>
-#include <mqtt.h> 
+#include <mqtt.h>
 #include <dthSetUp.h>
 #include <ds18b20SetUp.h>
-#include "freertos/semphr.h"
+#include <timeSetUp.h>
+#include "freertos/semphr.h" 
 #include <storage.h>
-
+#include <alert.h>
 
 
 // Definir los "handle" de las tareas
@@ -37,28 +38,54 @@ void Task2(void *pvParameters) {
     float temperaturaDHT;
     float humedad;
     float temperatureCDs18b20;
+    float tempDHTMin = -5;
+    float tempDHTMax = 26;
+    float humidityMin = 30;
+    float humidityMax = 50;
+    float tempDS18Min = -8;
+    float tempDS18Max = 30;
+
     setupSPIFFS();
     setUpLcd(wifiSemaphore);
     dthSensorsetUp();
     ds18b20SetUp(lcdSemaphore);
-
+    configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
     unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 30000; 
+    unsigned long publishInterval = 60000; 
+
+    unsigned long lastSaveTime = millis();
+    unsigned long saveInte = 20000; 
+
     while (true) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);  // Espera de 2 segundos
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
-        saveDataToCSV(temperaturaDHT,humedad,temperatureCDs18b20,publishInterval);
+        verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+        //saveDataToCSV(payload,getAdjustedTime(),temperaturaDHT,humedad,temperatureCDs18b20);
+        
+        if (millis() - lastSaveTime >= saveInte){
+            //saveDataToCSV(payload,getAdjustedTime(),temperaturaDHT,humedad,temperatureCDs18b20,1);
+            saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(),temperaturaDHT,humedad,temperatureCDs18b20,1);
+
+            lastSaveTime = millis();  
+        }else if (millis() - lastSaveTime < saveInte){
+            //saveDataToCSV(payload,getAdjustedTime(),temperaturaDHT,humedad,temperatureCDs18b20,0);
+            saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(),temperaturaDHT,humedad,temperatureCDs18b20,0);
+        }
+        
         if (isWiFiConnected() && isMQTTConnected()) {
             if (millis() - lastPublishTime >= publishInterval) {
-                sendStoredData(lcdSemaphore);
-                //publishData(lcdSemaphore, temperaturaDHT, humedad, temperatureCDs18b20);  
+                //sendStoredData(); // publica los datos que tiene almacenados
+                //String date = getDateSeparate();
+                //String time= getTimeSeparate();
+                publishData(lcdSemaphore, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);  
                 lastPublishTime = millis();  
             }
-        }
+        } 
+        
         vTaskDelay(1000 / portTICK_PERIOD_MS) ;  
-    }    
+    }  
 }
 
 void setup() {

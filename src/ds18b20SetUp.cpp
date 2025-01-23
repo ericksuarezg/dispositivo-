@@ -34,7 +34,7 @@ bool ds18b20SetUp(SemaphoreHandle_t lcdSemaphore){
   }
 }
 
-void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore,float &temperatureCDs18b20){
+void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore,float &temperatureCDs18b20){  
   if (!ds18b20Configured || (temperatureCDs18b20== -127)) {
     Serial.println("Sensor DS18B20 no configurado. Saltando lectura.");
     if (xSemaphoreTake(lcdSemaphore,3000 / portMAX_DELAY)==pdTRUE){
@@ -53,11 +53,13 @@ void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore,float &temperatureCDs
   }
   sensors.requestTemperatures();
   temperatureCDs18b20 = sensors.getTempCByIndex(0);
-  if (xSemaphoreTake(lcdSemaphore,5000 / portMAX_DELAY)==pdTRUE){
+  
+  if (xSemaphoreTake(lcdSemaphore, 5000 / portMAX_DELAY) == pdTRUE) {
     displayDataOnLCDofDbs18b20(temperatureCDs18b20);
+    Serial.println("Temperatura DS18");
     Serial.print(temperatureCDs18b20);
     Serial.println("ºC");
     vTaskDelay(5000 / portTICK_PERIOD_MS);
     xSemaphoreGive(lcdSemaphore);
-  } 
+  }
 }

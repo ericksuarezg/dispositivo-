@@ -37,49 +37,52 @@ bool dthSensorsetUp (){
   
 }
 void dhtReading(SemaphoreHandle_t lcdSemaphore,float &temperaturaDHT, float &humedad) {
-    if (!dhtConfigured) {
-      Serial.println("Sensor DHT22 no configurado. Intentando configurar nuevamente.");
-      if (xSemaphoreTake(lcdSemaphore,3000 / portMAX_DELAY)==pdTRUE){
-        dhtConfigured = dthSensorsetUp();
-        xSemaphoreGive(lcdSemaphore);
-      }
-      if (!dhtConfigured)
-      {
-        Serial.println("Error: No se pudo configurar el sensor DHT22.");
-        temperaturaDHT = NAN;
-        humedad = NAN; // Valores no válidos para indicar error
-        return;
-      }else{
-        if (xSemaphoreTake(lcdSemaphore,3000 / portMAX_DELAY)==pdTRUE)
-        {
-         displayInfoOnLCD(" Config exitosa", "de sensor DTH22");
-         vTaskDelay(3000 / portTICK_PERIOD_MS);
-         xSemaphoreGive(lcdSemaphore);
-         return;
-        }
-      }
-    }  
-    temperaturaDHT = dht.readTemperature();
-    humedad = dht.readHumidity();
-    Serial.print(temperaturaDHT);
-    Serial.print(humedad);
-    
-    if (isnan(temperaturaDHT) || isnan(humedad)) {
-      if (xSemaphoreTake(lcdSemaphore,3000 / portMAX_DELAY)==pdTRUE)
-      {
-        Serial.println("Error al leer el sensor DHT22");
-        displayInfoOnLCD("error DTH", "Not reading it");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        xSemaphoreGive(lcdSemaphore);
-      }
-      
-    }else
+  if (!dhtConfigured) {
+    Serial.println("Sensor DHT22 no configurado. Intentando configurar nuevamente.");
+    if (xSemaphoreTake(lcdSemaphore,3000 / portMAX_DELAY)==pdTRUE){
+      dhtConfigured = dthSensorsetUp();
+      xSemaphoreGive(lcdSemaphore);
+    }
+    if (!dhtConfigured)
     {
+      Serial.println("Error: No se pudo configurar el sensor DHT22.");
+      temperaturaDHT = NAN;
+      humedad = NAN; // Valores no válidos para indicar error
+      return;
+    }else{
       if (xSemaphoreTake(lcdSemaphore,3000 / portMAX_DELAY)==pdTRUE)
       {
-        displayDataOnLCDofDHT(temperaturaDHT,humedad);
+       displayInfoOnLCD(" Config exitosa", "de sensor DTH22");
+       vTaskDelay(3000 / portTICK_PERIOD_MS);
+       xSemaphoreGive(lcdSemaphore);
+       return;
+      }
+    }
+  }  
+  temperaturaDHT = dht.readTemperature();
+  humedad = dht.readHumidity();
+  Serial.println("TemperaturaDTH");
+  Serial.print(temperaturaDHT);
+  Serial.println("Humedad");
+  Serial.print(humedad);
+  
+  if (isnan(temperaturaDHT) || isnan(humedad)) {
+    if (xSemaphoreTake(lcdSemaphore, 3000 / portMAX_DELAY) == pdTRUE) {
+      Serial.println("Error al leer el sensor DHT22");
+      displayInfoOnLCD("error DTH", "Not reading it");
+      vTaskDelay(5000 / portTICK_PERIOD_MS);
+      xSemaphoreGive(lcdSemaphore);
+    }
+  } else {
+    bool alerta = false;
+
+    // Mostrar datos normales si no hay alerta
+    if (!alerta) {
+      if (xSemaphoreTake(lcdSemaphore, 3000 / portMAX_DELAY) == pdTRUE) {
+        displayDataOnLCDofDHT(temperaturaDHT, humedad);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         xSemaphoreGive(lcdSemaphore);
       }
     }
+  }
 }
