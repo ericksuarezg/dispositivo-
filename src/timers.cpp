@@ -3,6 +3,7 @@
 #include "LcdSetUp.h"
 #include "ds18b20SetUp.h"
 #include "dthSetUp.h"
+#include "alert.h"
 #include "timeSetUp.h"
 #include "storage.h"
 #include "mqtt.h"
@@ -31,29 +32,88 @@ unsigned long timeAtStart;  // Marca del tiempo al inicio del programa
 
 // Funciones que se ejecutarán a las horas específicas
 void tareaProgramada1() {
-  unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 60000; 
+  Serial.println("Ejecutando tarea programada a las 1000 PM");
+    float temperatureCDs18b20;
+    float temperaturaDHT;
+    float humedad;
+    //trae la temperatura del ds18b20 y del dht
+    temperatureCDs18b20 = ds18b20GetTemperature();
+    temperaturaDHT = dhtGetTemperature();
+    humedad = dhtGetHumidity();
 
-    unsigned long lastSaveTime = millis();
-    unsigned long saveInte = 20000; 
+    // Verificar si los datos son validos
+    if(temperatureCDs18b20 == -127 || (isnan(temperatureCDs18b20))){
+      Serial.println("Sensor DS18B20 no encontrado");
+      alertaOutSensorService("DS18B20", "Sensor no encontrado");
+      return;
+    }
 
-  Serial.println("INICIO EJECUCION TAREA PROGRAMADA 1");
-    vTaskDelay(2000 / portTICK_PERIOD_MS);  // Espera de 2 segundos
-    void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore, float &temperatureCDs18b20);
-    void dhtReading(SemaphoreHandle_t lcdSemaphore, float &temperaturaDHT, float &humedad);
+    if(isnan(temperaturaDHT) || isnan(humedad)){
+      Serial.println("Sensor DHT no encontrado");
+      alertaOutSensorService("DHT", "Sensor no encontrado");
+      return;
+    }
 
-    vTaskDelay(1000 / portTICK_PERIOD_MS) ;  
-    Serial.println("TERMINANDO LA TAREA1 lectura de sensores a la 8:10:00 PM");
+    // Verificar alertas
+    verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+    publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
+
 }
 
 void tareaProgramada2() {
-  Serial.println("Ejecutando tarea programada a las 8:11:00 PM");
-    updateClockDisplay();
+  Serial.println("Ejecutando tarea programada a las 5:15 AM");
+    float temperatureCDs18b20;
+    float temperaturaDHT;
+    float humedad;
+    //trae la temperatura del ds18b20 y del dht
+    temperatureCDs18b20 = ds18b20GetTemperature();
+    temperaturaDHT = dhtGetTemperature();
+    humedad = dhtGetHumidity();
+
+    // Verificar si los datos son validos
+    if(temperatureCDs18b20 == -127 || (isnan(temperatureCDs18b20))){
+      Serial.println("Sensor DS18B20 no encontrado");
+      alertaOutSensorService("DS18B20", "Sensor no encontrado");
+      return;
+    }
+
+    if(isnan(temperaturaDHT) || isnan(humedad)){
+      Serial.println("Sensor DHT no encontrado");
+      alertaOutSensorService("DHT", "Sensor no encontrado");
+      return;
+    }
+
+    // Verificar alertas
+    verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+    publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
 }
 
 void tareaProgramada3() {
-  Serial.println("Ejecutando tarea programada a las 8:12:05 PM");
-    updateClockDisplay();
+  Serial.println("Ejecutando tarea programada a las 8:10 AM");
+    float temperatureCDs18b20;
+    float temperaturaDHT;
+    float humedad;
+    //trae la temperatura del ds18b20 y del dht
+    temperatureCDs18b20 = ds18b20GetTemperature();
+    temperaturaDHT = dhtGetTemperature();
+    humedad = dhtGetHumidity();
+
+    // Verificar si los datos son validos
+    if(temperatureCDs18b20 == -127 || (isnan(temperatureCDs18b20))){
+      Serial.println("Sensor DS18B20 no encontrado");
+      alertaOutSensorService("DS18B20", "Sensor no encontrado");
+      return;
+    }
+
+    if(isnan(temperaturaDHT) || isnan(humedad)){
+      Serial.println("Sensor DHT no encontrado");
+      alertaOutSensorService("DHT", "Sensor no encontrado");
+      return;
+    }
+
+    // Verificar alertas
+    verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+    publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
 
 }
 
@@ -90,9 +150,9 @@ void startTimers(time_t adjustedTime) {
   unsigned long secondsFromStartOfDay = (baseHour * 3600) + (baseMinute * 60) + baseSecond;
 
   // Tiempos programados en segundos desde el inicio del día
-  unsigned long timeTo6_10PM = (20 * 3600) + (10 * 60);  // 17:00:00 (5:00 PM)
-  unsigned long timeTo6_15PM = (20 * 3600) + (11 * 60); // 17:15:00 (5:15 PM)
-  unsigned long timeTo6_20PM = (20 * 3600) + (12 * 60); // 17:20:00 (5:20 PM)
+  unsigned long timeTo6_10PM = (22 * 3600) + (00 * 60);  // 17:00:00 (5:00 PM)
+  unsigned long timeTo6_15PM = (5 * 3600) + (15 * 60); // 17:15:00 (5:15 PM)
+  unsigned long timeTo6_20PM = (8 * 3600) + (10 * 60); // 17:20:00 (5:20 PM)
 
   // Lógica de reprogramación, ajustada para tareas del mismo día o día siguiente
   unsigned long remainingTime;

@@ -9,4 +9,6 @@ void configurarAlertas(float tempDHTMin, float tempDHTMax,
 // Función para verificar y generar alertas
 void verificarAlertas(float tempDHT, float humidity, float tempDS18);
 
+void alertaOutSensorService(String sensorName, String messageSensorOutService);
+
 #endif // ALERT_H

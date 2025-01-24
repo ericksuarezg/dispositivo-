@@ -39,9 +39,9 @@ void Task2(void *pvParameters) {
     float humedad;
     float temperatureCDs18b20;
     float tempDHTMin = -5;
-    float tempDHTMax = 26;
-    float humidityMin = 30;
-    float humidityMax = 50;
+    float tempDHTMax = 30;
+    float humidityMin = 10;
+    float humidityMax = 90;
     float tempDS18Min = -8;
     float tempDS18Max = 30;
 
@@ -50,11 +50,12 @@ void Task2(void *pvParameters) {
     dthSensorsetUp();
     ds18b20SetUp(lcdSemaphore);
     configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
+    
     unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 60000; 
+    unsigned long publishInterval = 60000; // 1 minuto en milisegundos
 
     unsigned long lastSaveTime = millis();
-    unsigned long saveInte = 20000; 
+    unsigned long saveInterval = 10000; // 2 segundos en milisegundos
 
     while (true) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);  // Espera de 2 segundos
@@ -62,28 +63,33 @@ void Task2(void *pvParameters) {
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
         verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
-        //saveDataToCSV(payload,getAdjustedTime(),temperaturaDHT,humedad,temperatureCDs18b20);
-        
-        if (millis() - lastSaveTime >= saveInte){
-            //saveDataToCSV(payload,getAdjustedTime(),temperaturaDHT,humedad,temperatureCDs18b20,1);
-            saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(),temperaturaDHT,humedad,temperatureCDs18b20,1);
 
-            lastSaveTime = millis();  
-        }else if (millis() - lastSaveTime < saveInte){
-            //saveDataToCSV(payload,getAdjustedTime(),temperaturaDHT,humedad,temperatureCDs18b20,0);
-            saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(),temperaturaDHT,humedad,temperatureCDs18b20,0);
+        // Almacenar datos periódicamente
+        unsigned long currentTime = millis();
+        // Verificar intervalo de guardado
+        if (currentTime - lastSaveTime >= saveInterval) {
+            // Guardar datos con bandera 0 (no enviar)
+            saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
+            lastSaveTime = currentTime;
         }
-        
-        if (isWiFiConnected() && isMQTTConnected()) {
-            if (millis() - lastPublishTime >= publishInterval) {
-                //sendStoredData(); // publica los datos que tiene almacenados
-                //String date = getDateSeparate();
-                //String time= getTimeSeparate();
-                publishData(lcdSemaphore, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);  
-                lastPublishTime = millis();  
+
+        /*
+        // Verificar intervalo de publicación
+        if (currentTime - lastPublishTime >= publishInterval) {
+            // Guardar datos con bandera 1 (para enviar)
+            saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+            
+            // Verificar conexión antes de publicar
+            if (isWiFiConnected() && isMQTTConnected()) {
+                publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
+                //readAndUpdateCSV(); // Actualizar banderas después de publicar
+                lastPublishTime = currentTime;
+            } else {
+                Serial.println("Sin conexión - Datos guardados para envío posterior");
+                //readAndUpdateCSV(); // Actualizar banderas después de publicar
             }
-        } 
-        
+        }
+        */
         vTaskDelay(1000 / portTICK_PERIOD_MS) ;  
     }  
 }

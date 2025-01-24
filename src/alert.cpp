@@ -8,6 +8,7 @@ String externTemp = "Temperatura Ambiente";
 String externHumidity = "Humedad Relativa";
 String externTempDS18 = "Temperatura DS18B20";
 
+
 // Estructura para almacenar los límites de las alertas
 struct AlertLimits {
     float tempDHTMin = 0.0;
@@ -61,4 +62,8 @@ void verificarAlertas(float tempDHT, float humidity, float tempDS18) {
         Serial.println("¡ALERTA! Temperatura DS18B20 muy alta: " + String(tempDS18) + "°C");
         publishAlerts(getDateSeparate(), getTimeSeparate(), highRange, externTempDS18, tempDS18);
     }
+}
+
+void alertaOutSensorService(String sensorName, String messageSensorOutService){
+    publishAlertsSensorOutService(getDateSeparate(), getTimeSeparate(), messageSensorOutService, sensorName);
 }

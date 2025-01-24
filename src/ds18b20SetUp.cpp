@@ -8,8 +8,6 @@ OneWire oneWire(oneWireBus);
 DallasTemperature sensors(&oneWire);
 
 
-
-
 bool ds18b20SetUp(SemaphoreHandle_t lcdSemaphore){
   sensors.begin();
   displayInfoOnLCD("   Configurando","    ds18b20");
@@ -62,4 +60,9 @@ void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore,float &temperatureCDs
     vTaskDelay(5000 / portTICK_PERIOD_MS);
     xSemaphoreGive(lcdSemaphore);
   }
-}
+} 
+
+float ds18b20GetTemperature(){
+  sensors.requestTemperatures();
+  return sensors.getTempCByIndex(0);
+} 

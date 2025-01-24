@@ -7,5 +7,6 @@
 
 void setupSPIFFS(); 
 void saveDataToCSV(String payload, String datePart, String timePart, float tempDHT, float humedad, float tempDS18B20, int toSend);
-void sendStoredData();
+//void sendStoredData();
+void readAndUpdateCSV();
 #endif 

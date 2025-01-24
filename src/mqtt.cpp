@@ -107,17 +107,13 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
   }
 }
 
-void publishData(SemaphoreHandle_t lcdSemaphore, String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18) {
+void publishData(String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18) {
     Serial.print(temperaturaDS18);
     delay(5000);
 
     // Verificar si los datos son válidos
     if (isnan(temperaturaDHT) || isnan(humedadRelativa) || isnan(temperaturaDS18) || temperaturaDS18 == -127) {
         Serial.println("Error: Datos inválidos. No se publicará información.");
-        if (xSemaphoreTake(lcdSemaphore, portMAX_DELAY) == pdTRUE) {
-            displayInfoOnLCD("Error publicación", "Datos no válidos");
-            xSemaphoreGive(lcdSemaphore);
-        }
         return;
     }
 
@@ -159,15 +155,6 @@ void publishData(SemaphoreHandle_t lcdSemaphore, String date, String time, float
         Serial.println("Error al publicar el mensaje.");
         return;
     }
-
-    // Mostrar los datos en el LCD
-    if (xSemaphoreTake(lcdSemaphore, 3000 / portMAX_DELAY) == pdTRUE) {
-        displayDataOnLCD(temperaturaDHT, humedadRelativa, temperaturaDS18);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        displayInfoOnLCD("La data ha sido", "     enviada    ");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        xSemaphoreGive(lcdSemaphore);
-    }
 }
 
 
@@ -176,47 +163,6 @@ bool isMQTTConnected() {
     return client.connected();
 }
 
-void storagePublishData(String datePart, String timePart, float temperaturaDHT,float humedadRelativa, float temperaturaDS18) {
-  // Crear un objeto JSON para almacenar los datos
-  Serial.print(temperaturaDS18);
-  delay(10);
-  if (isnan(temperaturaDHT) || isnan(humedadRelativa) || isnan(temperaturaDS18) || temperaturaDS18==-127) {
-    Serial.println("Error: Datos inválidos. No se publicará información.");
-    return; 
-  }
-
-  // Convertir mqtt_client_id a String si no es ya un String
-    String clientId = String(mqtt_client_id);
-
-    // Crear manualmente el JSON como cadena
-    String jsonString = "{";
-    //jsonString += "\"typeMessage\":\"messageCurrent\",";
-    jsonString += "\"deviceId\":\"" + clientId + "\",";
-    jsonString += "\"data\":{";
-    jsonString += "\"header\":[";
-    jsonString += "\"Fecha lectura\",";
-    jsonString += "\"Hora de lectura\",";
-    jsonString += "\"temperatura dth22\",";
-    jsonString += "\"humedad Relativa\",";
-    jsonString += "\"temperatura ds18b20\"";
-    jsonString += "],";
-    jsonString += "\"body\":[";
-    jsonString += "\"" + datePart + "\",";
-    jsonString += "\"" + timePart + "\",";
-    jsonString += String(temperaturaDHT) + ",";
-    jsonString += String(humedadRelativa) + ",";
-    jsonString += String(temperaturaDS18);
-    jsonString += "]";
-    jsonString += "}";
-    jsonString += "}";
-
-  // Ver el JSON que se va a publicar en el monitor serial
-  Serial.println("Datos que se publicarán en storagePubishData:");
-  Serial.println(jsonString); // Imprimir JSON serializado
-  // Publicar el mensaje en el tema deseado
-  client.publish(mqtt_client_id, jsonString.c_str());
-  // Mostrar los datos en el LCD
-}
 
 void publishAlerts(String datePart, String timePart, String rangeTipe, String varName, float alertVatiable) {
     // Verificar si hay conexión MQTT
@@ -251,4 +197,36 @@ void publishAlerts(String datePart, String timePart, String rangeTipe, String va
     Serial.println(jsonString);
     client.publish(mqtt_client_id, jsonString.c_str());
 }
+
+void publishAlertsSensorOutService(String datePart, String timePart, String messageSensorOutService, String sensorName) {
+    // Verificar si hay conexión MQTT
+    if (!client.connected()) {
+        Serial.println("Error: No hay conexión MQTT para publicar alertas");
+        return;
+    }
+
+    String jsonString = "{";
+    jsonString += "\"typeMessage\":\"alertsMessage\",";
+    jsonString += "\"deviceId\":\"" + String(mqtt_client_id) + "\",";
+    jsonString += "\"data\":{";
+    jsonString += "\"header\":[";
+    jsonString += "\"Fecha lectura\",";
+    jsonString += "\"Hora de lectura\",";
+    jsonString += "\"Mensaje\",";
+    jsonString += "\"Nombre Sensor\"";
+    jsonString += "],";
+    jsonString += "\"body\":[";
+    jsonString += "\"" + datePart + "\",";
+    jsonString += "\"" + timePart + "\",";
+    jsonString += "\"" + messageSensorOutService + "\",";
+    jsonString += "\"" + sensorName + "\"";
+    jsonString += "]";
+    jsonString += "}";
+    jsonString += "}";
+
+    Serial.println("Publicando alerta de sensor fuera de servicio:");
+    Serial.println(jsonString);
+    client.publish(mqtt_client_id, jsonString.c_str());
+}
+
 

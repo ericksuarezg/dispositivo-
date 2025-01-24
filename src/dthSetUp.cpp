@@ -86,3 +86,12 @@ void dhtReading(SemaphoreHandle_t lcdSemaphore,float &temperaturaDHT, float &hum
     }
   }
 }
+
+float dhtGetTemperature(){
+  return dht.readTemperature();
+}
+
+float dhtGetHumidity(){
+  return dht.readHumidity();
+}
+  
