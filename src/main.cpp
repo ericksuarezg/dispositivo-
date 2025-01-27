@@ -52,30 +52,33 @@ void Task2(void *pvParameters) {
     configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
     
     unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 60000; // 1 minuto en milisegundos
+    unsigned long publishInterval = 600000; // 10 minutos en milisegundos
 
     unsigned long lastSaveTime = millis();
-    unsigned long saveInterval = 10000; // 2 segundos en milisegundos
+    unsigned long saveInterval = 180000; // 3 minutos en milisegundos
 
     while (true) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);  // Espera de 2 segundos
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
-        verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
-
         // Almacenar datos periódicamente
         unsigned long currentTime = millis();
         // Verificar intervalo de guardado
         if (currentTime - lastSaveTime >= saveInterval) {
+            // Verificar Alertas
+            verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+
             // Guardar datos con bandera 0 (no enviar)
             saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
             lastSaveTime = currentTime;
         }
-
-        /*
+        
         // Verificar intervalo de publicación
         if (currentTime - lastPublishTime >= publishInterval) {
+            // Verificar alertas
+            verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+
             // Guardar datos con bandera 1 (para enviar)
             saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
             
@@ -86,10 +89,11 @@ void Task2(void *pvParameters) {
                 lastPublishTime = currentTime;
             } else {
                 Serial.println("Sin conexión - Datos guardados para envío posterior");
+                saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+                publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
                 //readAndUpdateCSV(); // Actualizar banderas después de publicar
             }
-        }
-        */
+        }        
         vTaskDelay(1000 / portTICK_PERIOD_MS) ;  
     }  
 }

@@ -16,18 +16,13 @@ float getTemperaturaDHT();
 float getHumedad();
 
 // Declarar las tareas programadas
-void tareaProgramada1Function(SemaphoreHandle_t lcdSemaphore, float &temperatureCDs18b20, float &temperaturaDHT, float &humedad);
-void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore, float &temperatureCDs18b20);
-void dhtReading(SemaphoreHandle_t lcdSemaphore, float &temperaturaDHT, float &humedad);
-
-
-void tareaProgramada2Function();
-void tareaProgramada3Function();
-
-// Declarar la función del sensor DS18B20
+void tareaProgramada1();
+void tareaProgramada2();
+void tareaProgramada3();
 
 
 // Función para iniciar los temporizadores
 void startTimers(time_t adjustedTime);
+
 
 #endif

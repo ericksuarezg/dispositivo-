@@ -2,8 +2,8 @@
 #include "mqtt.h"
 #include "timeSetUp.h"
 
-String lowRange = "Rango por debajo del parametro";
-String highRange = "Rango por encima del parametro";
+String lowRange = "Bajo";
+String highRange = "Alto";
 String externTemp = "Temperatura Ambiente";
 String externHumidity = "Humedad Relativa";
 String externTempDS18 = "Temperatura DS18B20";

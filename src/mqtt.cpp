@@ -14,9 +14,9 @@ PubSubClient client(espClient);
 
 //const char * mqtt_server= "192.168.18.10";// local
 const char * mqtt_server= "goblue.com.co";
-const char* mqtt_user = "Equipo01"; 
-const char* mqtt_password = "Device01";
-const char* mqtt_client_id = "677ebe3f7fc72fa1fe5a2fde";
+const char* mqtt_user = "Device30"; 
+const char* mqtt_password = "Equipo30";
+const char* mqtt_client_id = "67956a0c5f3641ef68945dd6";
 const int mqtt_port = 7080;
 //const int mqtt_port = 3251; // puerto local
 

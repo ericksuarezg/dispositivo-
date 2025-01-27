@@ -62,6 +62,8 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
     Serial.println("Datos guardados en CSV: " + dataLine);
 }
 
+
+
 void readAndUpdateCSV() {
     File file = SPIFFS.open("/deviceDataSensor.csv", FILE_READ);
     if (!file) {
