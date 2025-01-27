@@ -67,7 +67,7 @@ void tareaProgramada1() {
         Serial.println("Datos publicados exitosamente");
     } else {
         Serial.println("Sin conexión - Guardando datos para envío posterior");
-        saveDataToCSV("", getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+        saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
     }
     Serial.println("------------------------");
     timerTask1.once(24*60*60, tareaProgramada1);
@@ -106,7 +106,7 @@ void tareaProgramada2() {
         Serial.println("Datos publicados exitosamente");
     } else {
         Serial.println("Sin conexión - Guardando datos para envío posterior");
-        saveDataToCSV("", getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+        saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
     }
     Serial.println("----------------------------------------");
     timerTask2.once(24*60*60, tareaProgramada2);
@@ -145,8 +145,7 @@ void tareaProgramada3() {
         Serial.println("Datos publicados exitosamente");
     } else {
         Serial.println("Sin conexión - Guardando datos para envío posterior");
-        // Guardar datos con bandera 1 (pendiente de enviar)
-        saveDataToCSV("", getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+        //saveDataToCSV("", getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
     }
     Serial.println("----------------------------------------");
     timerTask3.once(24*60*60, tareaProgramada3);
@@ -170,9 +169,9 @@ void startTimers(time_t adjustedTime) {
   unsigned long secondsFromStartOfDay = (baseHour * 3600) + (baseMinute * 60) + baseSecond;
 
   // Tiempos programados en segundos desde el inicio del día
-    unsigned long timeTo10PM = (19 * 3600) + (27 * 60);   // 22:00:00 (10:00 PM)
-    unsigned long timeTo5_15AM = (19 * 3600) + (29 * 60); // 05:15:00 (5:15 AM)
-    unsigned long timeTo8_10AM = (19 * 3600) + (32 * 60); // 08:10:00 (8:10 AM)
+    unsigned long timeTo10PM = (16 * 3600) + (41 * 60);   // 22:00:00 (10:00 PM)
+    unsigned long timeTo5_15AM = (16 * 3600) + (43 * 60); // 05:15:00 (5:15 AM)
+    unsigned long timeTo8_10AM = (16 * 3600) + (45 * 60); // 08:10:00 (8:10 AM)
 
   // Lógica de reprogramación, ajustada para tareas del mismo día o día siguiente
   unsigned long remainingTime;

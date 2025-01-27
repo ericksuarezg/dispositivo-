@@ -27,6 +27,7 @@ void conectToInternet(void *pvParameters) {
         Serial.println("verificando conexion a Wifi y Mqtt en ejecucion");
         reconectWiFi(lcdSemaphore);
         reconnect(lcdSemaphore);
+        sendStoredData();
         CheckForMessages();
         vTaskDelay(1000 / portTICK_PERIOD_MS);  // Espera de 1 segundo
     }
@@ -52,7 +53,7 @@ void Task2(void *pvParameters) {
     configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
     
     unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 600000; // 10 minutos en milisegundos
+    unsigned long publishInterval = 300000; // 5 minutos en milisegundos
 
     unsigned long lastSaveTime = millis();
     unsigned long saveInterval = 180000; // 3 minutos en milisegundos
@@ -62,15 +63,12 @@ void Task2(void *pvParameters) {
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
-        // Almacenar datos periódicamente
+          // Almacenar datos periódicamente
         unsigned long currentTime = millis();
         // Verificar intervalo de guardado
         if (currentTime - lastSaveTime >= saveInterval) {
             // Verificar Alertas
             verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
-
-            // Guardar datos con bandera 0 (no enviar)
-            saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
             lastSaveTime = currentTime;
         }
         
@@ -78,29 +76,27 @@ void Task2(void *pvParameters) {
         if (currentTime - lastPublishTime >= publishInterval) {
             // Verificar alertas
             verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
-
-            // Guardar datos con bandera 1 (para enviar)
-            saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
-            
+        
             // Verificar conexión antes de publicar
             if (isWiFiConnected() && isMQTTConnected()) {
+                // Publica los datos
                 publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
-                //readAndUpdateCSV(); // Actualizar banderas después de publicar
+                // Guardar datos con bandera 1 (para enviar)
+                saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
                 lastPublishTime = currentTime;
             } else {
                 Serial.println("Sin conexión - Datos guardados para envío posterior");
                 saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
-                publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
-                //readAndUpdateCSV(); // Actualizar banderas después de publicar
             }
-        }        
+            lastPublishTime = currentTime;
+        }    
+        
         vTaskDelay(1000 / portTICK_PERIOD_MS) ;  
     }  
 }
 
 void setup() {
     Serial.begin(9600); 
-    // Crear las tareas
     // Crear el semáforo
     wifiSemaphore = xSemaphoreCreateBinary();
     lcdSemaphore= xSemaphoreCreateBinary();

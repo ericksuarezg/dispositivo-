@@ -5,19 +5,23 @@
 #include <WiFiManagerSetUp.h> 
 #include <timeSetUp.h>
 #include <storage.h>
+#include <WiFiClientSecure.h>
 
 #define MAX_BUFFER_SIZE 512  // Modifica este valor según lo que necesites
 
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+//WiFiClient espClient;
+//PubSubClient client(espClient);
+WiFiClientSecure espClientSecure;
+PubSubClient client(espClientSecure);
 
 //const char * mqtt_server= "192.168.18.10";// local
 const char * mqtt_server= "goblue.com.co";
 const char* mqtt_user = "Device30"; 
 const char* mqtt_password = "Equipo30";
 const char* mqtt_client_id = "67956a0c5f3641ef68945dd6";
-const int mqtt_port = 7080;
+//const int mqtt_port = 7080;
+const int mqtt_port = 8884; // mqtts
 //const int mqtt_port = 3251; // puerto local
 
 bool mqttConnected = false;
@@ -79,6 +83,7 @@ void CheckForMessages(){
 }
 
 void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
+  espClientSecure.setInsecure();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
   client.setKeepAlive(60); // Configura un Keep-Alive de 60 segundos

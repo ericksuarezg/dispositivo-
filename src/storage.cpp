@@ -64,78 +64,6 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
 
 
 
-void readAndUpdateCSV() {
-    File file = SPIFFS.open("/deviceDataSensor.csv", FILE_READ);
-    if (!file) {
-        Serial.println("No se puede abrir el archivo para lectura");
-        return;
-    }
-
-    std::vector<String> lines;
-    bool needsUpdate = false;
-
-    // Leer todas las líneas del archivo
-    while (file.available()) {
-        String line = file.readStringUntil('\n');
-        line.trim();
-        
-        if (line.length() > 0) {
-            // Verificar si la línea tiene datos para enviar y no han sido enviados
-            int lastComma = line.lastIndexOf(',');
-            int secondLastComma = line.lastIndexOf(',', lastComma - 1);
-            
-            int sent = line.substring(lastComma + 1).toInt();
-            int toSend = line.substring(secondLastComma + 1, lastComma).toInt();
-
-            if (toSend == 1 && sent == 0 && isMQTTConnected()) {
-                // Extraer los datos necesarios
-                int startDataIndex = line.lastIndexOf(',', secondLastComma - 1);
-                for (int i = 0; i < 3; i++) {
-                    startDataIndex = line.lastIndexOf(',', startDataIndex - 1);
-                }
-                
-                String datePart = line.substring(line.lastIndexOf(',', startDataIndex - 1) + 1, 
-                                               line.indexOf(',', line.lastIndexOf(',', startDataIndex - 1) + 1));
-                String timePart = line.substring(line.lastIndexOf(',', startDataIndex) + 1, 
-                                               line.indexOf(',', line.lastIndexOf(',', startDataIndex) + 1));
-                float tempDHT = line.substring(startDataIndex + 1, 
-                                             line.indexOf(',', startDataIndex + 1)).toFloat();
-                float humedad = line.substring(line.indexOf(',', startDataIndex + 1) + 1, 
-                                            line.indexOf(',', line.indexOf(',', startDataIndex + 1) + 1)).toFloat();
-                float tempDS18B20 = line.substring(line.lastIndexOf(',', secondLastComma - 1) + 1, 
-                                                 secondLastComma).toFloat();
-
-                // Publicar los datos usando publishData
-                //publishData(NULL, datePart, timePart, tempDHT, humedad, tempDS18B20);
-                
-                // Marcar como enviado
-                line = line.substring(0, lastComma + 1) + "1";
-                needsUpdate = true;
-            }
-            lines.push_back(line);
-        }
-    }
-    file.close();
-
-    // Si se realizaron cambios, actualizar el archivo
-    if (needsUpdate) {
-        File writeFile = SPIFFS.open("/deviceDataSensor.csv", FILE_WRITE);
-        if (!writeFile) {
-            Serial.println("Error al abrir el archivo para escritura");
-            return;
-        }
-
-        for (const String& line : lines) {
-            writeFile.println(line);
-        }
-        writeFile.close();
-        Serial.println("Archivo CSV actualizado exitosamente");
-    }
-}
-
-
-
-/*
 void sendStoredData() {
     File file = SPIFFS.open("/deviceDataSensor.csv", FILE_READ);
     if (!file) {
@@ -168,7 +96,7 @@ void sendStoredData() {
         int sent = line.substring(lastComma + 1).toInt();
         int toSend = line.substring(secondLastComma + 1, lastComma).toInt();
 
-        Serial.println("Estado actual - toSend: " + String(toSend) + ", sent: " + String(sent));
+        //Serial.println("Estado actual - toSend: " + String(toSend) + ", sent: " + String(sent));
 
         if (toSend == 1 && sent == 0 && isMQTTConnected()) {
             // Extraer los datos necesarios para enviar
@@ -179,12 +107,22 @@ void sendStoredData() {
             
             String datePart = line.substring(line.lastIndexOf(',', startDataIndex - 1) + 1, line.indexOf(',', line.lastIndexOf(',', startDataIndex - 1) + 1));
             String timePart = line.substring(line.lastIndexOf(',', startDataIndex) + 1, line.indexOf(',', line.lastIndexOf(',', startDataIndex) + 1));
-            float tempDHT = line.substring(startDataIndex + 1, line.indexOf(',', startDataIndex + 1)).toFloat();
-            float humedad = line.substring(line.indexOf(',', startDataIndex + 1) + 1, line.indexOf(',', line.indexOf(',', startDataIndex + 1) + 1)).toFloat();
+            int tempDHTStart = line.indexOf(',', startDataIndex + timePart.length()) + 1;
+            int tempDHTEnd = line.indexOf(',', tempDHTStart);
+            float tempDHT = line.substring(tempDHTStart, tempDHTEnd).toFloat();
+            int humedadStart = line.indexOf(',', tempDHTEnd) + 1;
+            int humedadEnd = line.indexOf(',', humedadStart);
+            float humedad = line.substring(humedadStart, humedadEnd).toFloat();
+            Serial.println("humedad: " + String(humedad));
             float tempDS18B20 = line.substring(line.lastIndexOf(',', secondLastComma - 1) + 1, secondLastComma).toFloat();
 
+             // Para debug
+            Serial.println("Valores extraídos:");
+            Serial.println("tempDHT: " + String(tempDHT));
+            Serial.println("humedad: " + String(humedad));
+            Serial.println("tempDS18B20: " + String(tempDS18B20));
             // Enviar datos
-            //storagePublishData(datePart, timePart, tempDHT, humedad, tempDS18B20);
+            publishData(datePart, timePart, tempDHT, humedad, tempDS18B20);
             
             // Actualizar la línea con sent=1
             line = line.substring(0, lastComma + 1) + "1";
@@ -221,7 +159,6 @@ void sendStoredData() {
         }
     }
 }
-*/
 
 
 
