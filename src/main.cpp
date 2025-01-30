@@ -39,12 +39,12 @@ void Task2(void *pvParameters) {
     float temperaturaDHT;
     float humedad;
     float temperatureCDs18b20;
-    float tempDHTMin = -5;
-    float tempDHTMax = 30;
+    float tempDHTMin = -25;
+    float tempDHTMax = 35;
     float humidityMin = 10;
     float humidityMax = 90;
-    float tempDS18Min = -8;
-    float tempDS18Max = 30;
+    float tempDS18Min = -25;
+    float tempDS18Max = 35;
 
     setupSPIFFS();
     setUpLcd(wifiSemaphore);

@@ -16,12 +16,12 @@ WiFiClientSecure espClientSecure;
 PubSubClient client(espClientSecure);
 
 //const char * mqtt_server= "192.168.18.10";// local
-const char * mqtt_server= "aguisu.com";
-const char* mqtt_user = "Studio23"; 
+const char * mqtt_server= "goblue.com.co";
+const char* mqtt_user = ""; 
 //const char* mqtt_user = "Termo8936"; 
-const char* mqtt_password = "Studio23";
+const char* mqtt_password = "";
 //const char* mqtt_password = "Termo2023";
-const char* mqtt_client_id = "679a32069fe20cce0f68ad9f";
+const char* mqtt_client_id = "";
 //const char* mqtt_client_id = "6680422a40a2bf513dbce2df";
 //const int mqtt_port = 7080;
 const int mqtt_port = 8884; // mqtts
