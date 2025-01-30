@@ -53,7 +53,8 @@ void Task2(void *pvParameters) {
     configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
     
     unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 300000; // 5 minutos en milisegundos
+    unsigned long publishInterval = 14400000; // 4 horas en milisegundos
+    //unsigned long publishInterval = 30000; // 4 horas en milisegundos
 
     unsigned long lastSaveTime = millis();
     unsigned long saveInterval = 180000; // 3 minutos en milisegundos
@@ -63,11 +64,13 @@ void Task2(void *pvParameters) {
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
+        updateClockDisplay(lcdSemaphore);
           // Almacenar datos periódicamente
         unsigned long currentTime = millis();
         // Verificar intervalo de guardado
         if (currentTime - lastSaveTime >= saveInterval) {
             // Verificar Alertas
+            //saveDataToCSV(payload,getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
             verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
             lastSaveTime = currentTime;
         }
@@ -81,12 +84,13 @@ void Task2(void *pvParameters) {
             if (isWiFiConnected() && isMQTTConnected()) {
                 // Publica los datos
                 publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
+                //sendStoredData();
                 // Guardar datos con bandera 1 (para enviar)
-                saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
+                //saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
                 lastPublishTime = currentTime;
             } else {
                 Serial.println("Sin conexión - Datos guardados para envío posterior");
-                saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+                saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
             }
             lastPublishTime = currentTime;
         }    

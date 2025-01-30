@@ -5,6 +5,7 @@
 #include <NTPClient.h>
 #include "LcdSetup.h"
 #include "timers.h"
+#include "freertos/semphr.h"
 
 // Variables globales
 time_t baseTime = 0;
@@ -89,7 +90,7 @@ void localTimeSetUp() {
     baseTime = mktime(&timeInfo); // Hora y fecha inicial sincronizada
     millisAtSync = millis();     // Guardar tiempo en millis()
 
-    displayInfoOnLCD("Fecha y Hora Local:", timeString);  // Mostrar en la LCD
+    //displayInfoOnLCD("Fecha y Hora Local:", timeString);  // Mostrar en la LCD
   } else {
     Serial.println("No se pudo sincronizar la hora local.");
   }
@@ -153,11 +154,14 @@ String getAdjustedTime() {
   return String(timeString);
 }
 
-void updateClockDisplay() {
+void updateClockDisplay(SemaphoreHandle_t lcdSemaphore) {
   String currentTime = getAdjustedTime();
   Serial.print("Hora actual ajustada: ");
   Serial.println(currentTime);
-  displayInfoOnLCD("Hora:", currentTime.c_str());
+  if (xSemaphoreTake(lcdSemaphore,5000/portTICK_PERIOD_MS)==pdTRUE){
+    displayInfoOnLCD("Fecha       Hora", currentTime.c_str());
+    xSemaphoreGive(lcdSemaphore);
+  }
 }
 
 String getDateSeparate() {

@@ -169,9 +169,9 @@ void startTimers(time_t adjustedTime) {
   unsigned long secondsFromStartOfDay = (baseHour * 3600) + (baseMinute * 60) + baseSecond;
 
   // Tiempos programados en segundos desde el inicio del día
-    unsigned long timeTo10PM = (16 * 3600) + (41 * 60);   // 22:00:00 (10:00 PM)
-    unsigned long timeTo5_15AM = (16 * 3600) + (43 * 60); // 05:15:00 (5:15 AM)
-    unsigned long timeTo8_10AM = (16 * 3600) + (45 * 60); // 08:10:00 (8:10 AM)
+    unsigned long timeTo10PM = (8 * 3600) + (41 * 60);   // 22:00:00 (10:00 PM)
+    unsigned long timeTo5_15AM = (12 * 3600) + (50 * 60); // 05:15:00 (5:15 AM)
+    unsigned long timeTo8_10AM = (15 * 3600) + (45 * 60); // 08:10:00 (8:10 AM)
 
   // Lógica de reprogramación, ajustada para tareas del mismo día o día siguiente
   unsigned long remainingTime;

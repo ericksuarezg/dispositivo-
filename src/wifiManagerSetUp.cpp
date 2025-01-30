@@ -46,7 +46,7 @@ void reconectWiFi(SemaphoreHandle_t lcdSemaphore) {
         displayInfoOnLCD("Reconectado", "WiFi exitoso");
         localTimeSetUp(); //configura la hora local
         getAdjustedTime(); // Devuelve la hora ajustada segun millis
-        updateClockDisplay(); // Devuelve la hora basada en millis
+        updateClockDisplay(lcdSemaphore); // Devuelve la hora basada en millis
       } else {
         Serial.println("Falló la reconexión desde reconectWiFi.");
         displayInfoOnLCD("Reconexión fallida", "Intentando luego...");

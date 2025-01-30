@@ -35,7 +35,7 @@ String getAdjustedTime();
 /**
  * Muestra la hora ajustada en el LCD o Serial.
  */
-void updateClockDisplay();
+void updateClockDisplay(SemaphoreHandle_t lcdSemaphore);
 
 String getDateSeparate();
 String getTimeSeparate();

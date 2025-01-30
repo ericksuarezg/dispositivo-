@@ -3,6 +3,7 @@
 #include <mqtt.h>
 #include <LcdSetUp.h>
 #include <ArduinoJson.h>
+#include <wifiManagerSetUp.h>
 #include <vector>
 
 
@@ -13,9 +14,10 @@ void setupSPIFFS() {
         return;
     }
     Serial.println("SPIFFS Configurado exitosamente.");
+
 }
 
-void saveDataToCSV(String payload, String datePart, String timePart, float tempDHT, float humedad, float tempDS18B20, int toSend) {
+/* void saveDataToCSV(String payload, String datePart, String timePart, float tempDHT, float humedad, float tempDS18B20, int toSend) {
     
     if (isnan(tempDHT) || isnan(humedad) || isnan(tempDS18B20) || tempDS18B20==-127) {
         Serial.println("Error: Datos inválidos. No se almacenara información.");
@@ -61,10 +63,33 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
     file.close();
     Serial.println("Datos guardados en CSV: " + dataLine);
 }
+ */
 
+void saveDataToCSV(String payload, String datePart, String timePart, float tempDHT, float humedad, float tempDS18B20, int toSend) {
+    // Validar datos de los sensores
+    if (isnan(tempDHT) || isnan(humedad) || isnan(tempDS18B20) || tempDS18B20 == -127) {
+        Serial.println("Error: Datos inválidos. No se almacenará información.");
+        return;
+    }
 
+    // Abrir el archivo CSV en modo añadir
+    File file = SPIFFS.open("/deviceDataSensor.csv", FILE_APPEND);
+    if (!file) {
+        Serial.println("Error abriendo archivo CSV.");    
+        return;
+    }
 
-void sendStoredData() {
+    // Crear línea de datos reducida
+    String dataLine = datePart + "," + timePart + "," + String(tempDHT) + "," + String(humedad) + "," + String(tempDS18B20) + ",0";
+    
+    // Guardar en archivo y cerrar
+    file.println(dataLine);
+    file.close();
+    
+    Serial.println("Datos guardados en CSV: " + dataLine);
+}
+
+/* void sendStoredData() {
     File file = SPIFFS.open("/deviceDataSensor.csv", FILE_READ);
     if (!file) {
         Serial.println("No hay datos almacenados para enviar.");
@@ -138,7 +163,9 @@ void sendStoredData() {
 
     // Si hubo modificaciones, actualizar el archivo
     if (dataModified) {
+        SPIFFS.remove("/deviceDataSensor.csv");
         File outFile = SPIFFS.open("/deviceDataSensor.csv", FILE_WRITE);
+        
         if (outFile) {
             for (const String& updatedLine : updatedLines) {
                 outFile.println(updatedLine);
@@ -159,10 +186,97 @@ void sendStoredData() {
         }
     }
 }
+ */
+void sendStoredData() {
+    // Verificar conexión WiFi y MQTT antes de procesar datos
+    if (!isWiFiConnected()) {
+        Serial.println("Sin conexión WiFi - No se pueden enviar datos almacenados");
+        return;
+    }
 
+    if (!isMQTTConnected()) {
+        Serial.println("Sin conexión MQTT - No se pueden enviar datos almacenados"); 
+        return;
+    }
+    
+    File file = SPIFFS.open("/deviceDataSensor.csv", FILE_READ);
+    if (!file) {
+        Serial.println("No hay datos almacenados para enviar.");
+        return;
+    }
+    
+    std::vector<String> pendingLines;
+    bool allDataSent = true;
 
+    // Leer el archivo línea por línea
+    while (file.available()) {
+        String line = file.readStringUntil('\n');
+        line.trim(); // Eliminar espacios y saltos de línea
+        
+        if (line.length() == 0) continue;
 
+        // Separar los datos de la línea
+        std::vector<String> values;
+        int start = 0;
+        int end = line.indexOf(',');
+        while (end != -1) {
+            values.push_back(line.substring(start, end));
+            start = end + 1;
+            end = line.indexOf(',', start);
+        }
+        values.push_back(line.substring(start));
 
+        if (values.size() != 6) {
+            Serial.println("Línea con formato incorrecto: " + line);
+            pendingLines.push_back(line);
+            allDataSent = false;
+            continue;
+        }
+
+        int sent = values[5].toInt();
+
+        if (sent == 0 && isMQTTConnected()) {
+            String datePart = values[0];
+            String timePart = values[1];
+            float tempDHT = values[2].toFloat();
+            float humedad = values[3].toFloat();
+            float tempDS18B20 = values[4].toFloat();
+
+            // Enviar datos
+            if (publishData(datePart, timePart, tempDHT, humedad, tempDS18B20)) {
+                Serial.println("Datos enviados correctamente: " + line);
+            } else {
+                Serial.println("Error al enviar datos, se conservarán.");
+                pendingLines.push_back(line);
+                allDataSent = false;
+            }
+        } else {
+            pendingLines.push_back(line);
+            allDataSent = false;
+        }
+    }
+    file.close();
+
+    // Si todos los datos fueron enviados, vaciar el archivo
+    if (allDataSent) {
+        File outFile = SPIFFS.open("/deviceDataSensor.csv", FILE_WRITE);
+        if (outFile) {
+            outFile.println(""); // Escribir un archivo vacío
+            outFile.close();
+        }
+        Serial.println("Todos los datos fueron enviados, archivo vaciado.");
+    } else {
+        // Guardar solo los datos no enviados
+        File outFile = SPIFFS.open("/deviceDataSensor.csv", FILE_WRITE);
+        if (outFile) {
+            for (const String& pendingLine : pendingLines) {
+                outFile.println(pendingLine);
+            }
+            outFile.close();
+            Serial.println("Archivo CSV actualizado con datos pendientes de envío.");
+        }
+    }
+}
 
 
 

@@ -16,10 +16,13 @@ WiFiClientSecure espClientSecure;
 PubSubClient client(espClientSecure);
 
 //const char * mqtt_server= "192.168.18.10";// local
-const char * mqtt_server= "goblue.com.co";
-const char* mqtt_user = "Device30"; 
-const char* mqtt_password = "Equipo30";
-const char* mqtt_client_id = "67956a0c5f3641ef68945dd6";
+const char * mqtt_server= "aguisu.com";
+const char* mqtt_user = "Studio23"; 
+//const char* mqtt_user = "Termo8936"; 
+const char* mqtt_password = "Studio23";
+//const char* mqtt_password = "Termo2023";
+const char* mqtt_client_id = "679a32069fe20cce0f68ad9f";
+//const char* mqtt_client_id = "6680422a40a2bf513dbce2df";
 //const int mqtt_port = 7080;
 const int mqtt_port = 8884; // mqtts
 //const int mqtt_port = 3251; // puerto local
@@ -98,7 +101,7 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
       mqttConnected = true;
       client.subscribe(mqtt_user);
       //client.subscribe("devices/" + mqtt_client_id + "/configuration");   // Nueva suscripción
-      //displayInfoOnLCD("   Conectado a",  mqtt_server);
+      displayInfoOnLCD("   Conectado a",  mqtt_server);
       vTaskDelay(5000 / portTICK_PERIOD_MS);
       xSemaphoreGive(lcdSemaphore); 
     } else {
@@ -112,14 +115,14 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
   }
 }
 
-void publishData(String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18) {
+bool publishData(String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18) {
     Serial.print(temperaturaDS18);
-    delay(5000);
+    delay(100);
 
     // Verificar si los datos son válidos
     if (isnan(temperaturaDHT) || isnan(humedadRelativa) || isnan(temperaturaDS18) || temperaturaDS18 == -127) {
         Serial.println("Error: Datos inválidos. No se publicará información.");
-        return;
+        return false;
     }
 
     // Convertir mqtt_client_id a String si no es ya un String
@@ -133,9 +136,9 @@ void publishData(String date, String time, float temperaturaDHT, float humedadRe
     jsonString += "\"header\":[";
     jsonString += "\"Fecha lectura\",";
     jsonString += "\"Hora de lectura\",";
-    jsonString += "\"temperatura dth22\",";
-    jsonString += "\"humedad Relativa\",";
-    jsonString += "\"temperatura ds18b20\"";
+    jsonString += "\"temperatura Almacen\",";
+    jsonString += "\"humedad Almacen\",";
+    jsonString += "\"temperatura Nevera\"";
     jsonString += "],";
     jsonString += "\"body\":[";
     jsonString += "\"" + date + "\",";
@@ -156,9 +159,10 @@ void publishData(String date, String time, float temperaturaDHT, float humedadRe
 
     if (result) {
         Serial.println("Mensaje publicado correctamente.");
+        return true;
     } else {
         Serial.println("Error al publicar el mensaje.");
-        return;
+        return false;
     }
 }
 
