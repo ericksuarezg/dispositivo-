@@ -40,11 +40,11 @@ void Task2(void *pvParameters) {
     float humedad;
     float temperatureCDs18b20;
     float tempDHTMin = -25;
-    float tempDHTMax = 35;
+    float tempDHTMax = 40;
     float humidityMin = 10;
     float humidityMax = 90;
-    float tempDS18Min = -25;
-    float tempDS18Max = 35;
+    float tempDS18Min = -20;
+    float tempDS18Max = -3;
 
     setupSPIFFS();
     setUpLcd(wifiSemaphore);
@@ -53,11 +53,11 @@ void Task2(void *pvParameters) {
     configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
     
     unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 14400000; // 4 horas en milisegundos
+    unsigned long publishInterval = 600000; // 10 en minutos
     //unsigned long publishInterval = 30000; // 4 horas en milisegundos
 
     unsigned long lastSaveTime = millis();
-    unsigned long saveInterval = 180000; // 3 minutos en milisegundos
+    unsigned long saveInterval = 300000; // 5 minutos en milisegundos
 
     while (true) {
         vTaskDelay(2000 / portTICK_PERIOD_MS);  // Espera de 2 segundos
@@ -79,7 +79,8 @@ void Task2(void *pvParameters) {
         if (currentTime - lastPublishTime >= publishInterval) {
             // Verificar alertas
             verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
-        
+
+            
             // Verificar conexión antes de publicar
             if (isWiFiConnected() && isMQTTConnected()) {
                 // Publica los datos
@@ -92,6 +93,7 @@ void Task2(void *pvParameters) {
                 Serial.println("Sin conexión - Datos guardados para envío posterior");
                 saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
             }
+            
             lastPublishTime = currentTime;
         }    
         

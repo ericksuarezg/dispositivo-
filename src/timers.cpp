@@ -24,9 +24,11 @@ float getHumedad() {
 }
 
 // Definir los temporizadores globales
-Ticker timerTask1;  // Para la tarea a las 5:06:00 AM
-Ticker timerTask2;  // Para la tarea a las 4:30:00 PM
-Ticker timerTask3;  // Para la tarea a las 5:15:00 PM
+Ticker timerTask1;  // Para la tarea a las 3:00 AM
+Ticker timerTask2;  // Para la tarea a las 09:00 AM
+Ticker timerTask3;  // Para la tarea a las 03:00 PM
+Ticker timerTask4;  // Para la tarea a las 09:00 PM
+
 
 unsigned long timeAtStart;  // Marca del tiempo al inicio del programa
 
@@ -34,7 +36,7 @@ unsigned long timeAtStart;  // Marca del tiempo al inicio del programa
 // Funciones que se ejecutarán a las horas específicas
 void tareaProgramada1() {
   Serial.println("----------------------------------------");
-    Serial.println("Ejecutando tarea programada a las 05:06:00 AM");
+    Serial.println("Ejecutando tarea programada a las 3:00:00 AM");
     Serial.print("Hora actual: ");
     Serial.println(getTimeSeparate());;
     float temperatureCDs18b20;
@@ -71,12 +73,12 @@ void tareaProgramada1() {
     }
     Serial.println("------------------------");
     timerTask1.once(24*60*60, tareaProgramada1);
-    Serial.println("Tarea reprogramada para mañana a las 05:06:00 AM");
+    Serial.println("Tarea reprogramada para mañana a las 03:00:00 AM");
     Serial.println("----------------------------------------");
 }
 
 void tareaProgramada2() {
-  Serial.println("Ejecutando tarea programada a las 05:09 AM");
+  Serial.println("Ejecutando tarea programada a las 09:00:00 AM");
     float temperatureCDs18b20;
     float temperaturaDHT;
     float humedad;
@@ -110,12 +112,12 @@ void tareaProgramada2() {
     }
     Serial.println("----------------------------------------");
     timerTask2.once(24*60*60, tareaProgramada2);
-    Serial.println("Tarea reprogramada para mañana a las 5:09:00 AM");
+    Serial.println("Tarea reprogramada para mañana a las 09:00:00 AM");
     Serial.println("----------------------------------------");
 }
 
 void tareaProgramada3() {
-  Serial.println("Ejecutando tarea programada a las 11:10 AM");
+  Serial.println("Ejecutando tarea programada a las 03:00:00 PM");
     float temperatureCDs18b20;
     float temperaturaDHT;
     float humedad;
@@ -149,7 +151,47 @@ void tareaProgramada3() {
     }
     Serial.println("----------------------------------------");
     timerTask3.once(24*60*60, tareaProgramada3);
-    Serial.println("Tarea reprogramada para mañana a las 11:11:00 AM");
+    Serial.println("Tarea reprogramada para mañana a las 03:00:00 PM");
+    Serial.println("----------------------------------------");
+}
+
+
+void tareaProgramada4() {
+  Serial.println("Ejecutando tarea programada a las 09:00:00 PM");
+    float temperatureCDs18b20;
+    float temperaturaDHT;
+    float humedad;
+    //trae la temperatura del ds18b20 y del dht
+    temperatureCDs18b20 = ds18b20GetTemperature();
+    temperaturaDHT = dhtGetTemperature();
+    humedad = dhtGetHumidity();
+
+    // Verificar si los datos son validos
+    if(temperatureCDs18b20 == -127 || (isnan(temperatureCDs18b20))){
+      Serial.println("Sensor DS18B20 no encontrado");
+      alertaOutSensorService("DS18B20", "sensor_failure");
+      return;
+    }
+
+    if(isnan(temperaturaDHT) || isnan(humedad)){
+      Serial.println("Sensor DHT no encontrado");
+      alertaOutSensorService("DHT", "sensor_failure");
+      return;
+    }
+
+    // Verificar alertas
+    verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+    // Verificar conexión WiFi y MQTT antes de publicar
+    if (WiFi.status() == WL_CONNECTED && isMQTTConnected()) {
+        publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
+        Serial.println("Datos publicados exitosamente");
+    } else {
+        Serial.println("Sin conexión - Guardando datos para envío posterior");
+        //saveDataToCSV("", getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+    }
+    Serial.println("----------------------------------------");
+    timerTask4.once(24*60*60, tareaProgramada4);
+    Serial.println("Tarea reprogramada para mañana a las 09:00:00 PM");
     Serial.println("----------------------------------------");
 }
 
@@ -169,38 +211,49 @@ void startTimers(time_t adjustedTime) {
   unsigned long secondsFromStartOfDay = (baseHour * 3600) + (baseMinute * 60) + baseSecond;
 
   // Tiempos programados en segundos desde el inicio del día
-    unsigned long timeTo10PM = (8 * 3600) + (41 * 60);   // 22:00:00 (10:00 PM)
-    unsigned long timeTo5_15AM = (12 * 3600) + (50 * 60); // 05:15:00 (5:15 AM)
-    unsigned long timeTo8_10AM = (15 * 3600) + (45 * 60); // 08:10:00 (8:10 AM)
+    unsigned long timeTo3AM = (3 * 3600) + (00 * 60);   // 03:00:00 (3:00 AM)
+    unsigned long timeTo9AM = (9 * 3600) + (00 * 60); // 09:00:00 (9:00 AM)
+    unsigned long timeTo3PM = (15 * 3600) + (00 * 60); // 03:00:00 (3:00 PM)
+    unsigned long timeTo9PM = (21 * 3600) + (00 * 60); // 09:00:00 (9:00 PM)
+
 
   // Lógica de reprogramación, ajustada para tareas del mismo día o día siguiente
   unsigned long remainingTime;
   unsigned long secondsInADay = 24 * 3600;
 
-  // Programar Tarea 1 (10:00 PM)
-    if (secondsFromStartOfDay < timeTo10PM) {
-        remainingTime = timeTo10PM - secondsFromStartOfDay;
+  // Programar Tarea 1 (03:00 AM)
+    if (secondsFromStartOfDay < timeTo3AM) {
+        remainingTime = timeTo3AM - secondsFromStartOfDay;
     } else {
-        remainingTime = secondsInADay - secondsFromStartOfDay + timeTo10PM;
+        remainingTime = secondsInADay - secondsFromStartOfDay + timeTo3AM;
     }
     timerTask1.once(remainingTime, tareaProgramada1);
     Serial.printf("Tarea 1 programada para ejecutarse en %lu segundos\n", remainingTime);
 
-    // Programar Tarea 2 (5:15 AM)
-    if (secondsFromStartOfDay < timeTo5_15AM) {
-        remainingTime = timeTo5_15AM - secondsFromStartOfDay;
+    // Programar Tarea 2 (9:00 AM)
+    if (secondsFromStartOfDay < timeTo9AM) {
+        remainingTime = timeTo9AM - secondsFromStartOfDay;
     } else {
-        remainingTime = secondsInADay - secondsFromStartOfDay + timeTo5_15AM;
+        remainingTime = secondsInADay - secondsFromStartOfDay + timeTo9AM;
     }
     timerTask2.once(remainingTime, tareaProgramada2);
     Serial.printf("Tarea 2 programada para ejecutarse en %lu segundos\n", remainingTime);
 
-    // Programar Tarea 3 (8:10 AM)
-    if (secondsFromStartOfDay < timeTo8_10AM) {
-        remainingTime = timeTo8_10AM - secondsFromStartOfDay;
+    // Programar Tarea 3 (3:00 PM)
+    if (secondsFromStartOfDay < timeTo3PM) {
+        remainingTime = timeTo3PM - secondsFromStartOfDay;
     } else {
-        remainingTime = secondsInADay - secondsFromStartOfDay + timeTo8_10AM;
+        remainingTime = secondsInADay - secondsFromStartOfDay + timeTo3PM;
     }
     timerTask3.once(remainingTime, tareaProgramada3);
+    Serial.printf("Tarea 3 programada para ejecutarse en %lu segundos\n", remainingTime);
+
+    // Programar Tarea 4 (9:00 PM)
+    if (secondsFromStartOfDay < timeTo9PM) {
+        remainingTime = timeTo9PM - secondsFromStartOfDay;
+    } else {
+        remainingTime = secondsInADay - secondsFromStartOfDay + timeTo9PM;
+    }
+    timerTask4.once(remainingTime, tareaProgramada4);
     Serial.printf("Tarea 3 programada para ejecutarse en %lu segundos\n", remainingTime);
 }

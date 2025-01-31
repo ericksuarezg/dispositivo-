@@ -17,11 +17,11 @@ PubSubClient client(espClientSecure);
 
 //const char * mqtt_server= "192.168.18.10";// local
 const char * mqtt_server= "goblue.com.co";
-const char* mqtt_user = ""; 
+const char* mqtt_user = "NeveraPlayaAlta"; 
 //const char* mqtt_user = "Termo8936"; 
-const char* mqtt_password = "";
+const char* mqtt_password = "Nevera2025";
 //const char* mqtt_password = "Termo2023";
-const char* mqtt_client_id = "";
+const char* mqtt_client_id = "679be8d3541507c16065c542";
 //const char* mqtt_client_id = "6680422a40a2bf513dbce2df";
 //const int mqtt_port = 7080;
 const int mqtt_port = 8884; // mqtts
@@ -136,9 +136,9 @@ bool publishData(String date, String time, float temperaturaDHT, float humedadRe
     jsonString += "\"header\":[";
     jsonString += "\"Fecha lectura\",";
     jsonString += "\"Hora de lectura\",";
-    jsonString += "\"temperatura Almacen\",";
-    jsonString += "\"humedad Almacen\",";
-    jsonString += "\"temperatura Nevera\"";
+    jsonString += "\"Temperatura Ambiente\",";
+    jsonString += "\"Humedad Ambiente\",";
+    jsonString += "\"Temperatura Nevera\"";
     jsonString += "],";
     jsonString += "\"body\":[";
     jsonString += "\"" + date + "\",";

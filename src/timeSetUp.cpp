@@ -148,8 +148,8 @@ String getAdjustedTime() {
   // Convertir a time_t
   time_t hourAsTimeT = mktime(&timeStruct);
   
-  //startTimers(hourString);
-  startTimers(hourAsTimeT);
+  
+  //startTimers(hourAsTimeT);
   // Retornar la fecha y hora en formato YYYY-MM-DD HH:MM:SS
   return String(timeString);
 }
