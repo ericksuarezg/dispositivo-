@@ -6,6 +6,8 @@
 #include "LcdSetup.h"
 #include "timers.h"
 #include "freertos/semphr.h"
+#include <ArduinoJson.h>
+#include "timeSetUp.h"
 
 // Variables globales
 time_t baseTime = 0;
@@ -17,9 +19,10 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000); // Cliente NTP
 
 unsigned long currentTime = 0;
+bool timeConfigured = false;
 
 
-bool fetchUtcOffset() {
+/* bool fetchUtcOffset() {
   HTTPClient http;
   http.begin("http://ip-api.com/json/"); // Consulta IP y zona horaria
   int httpCode = http.GET();
@@ -58,10 +61,65 @@ bool fetchUtcOffset() {
 
   http.end();
   return false;
+} */
+bool fetchUtcOffset() {
+  // Crear instancia del cliente HTTP y definir la URL de la API
+  HTTPClient http;
+  http.begin("http://ip-api.com/json/");
+  
+  // Realizar la petición GET a la API
+  int httpCode = http.GET();
+
+  if (httpCode == 200) { // Si la respuesta es exitosa (HTTP 200)
+    // Obtener la respuesta en formato String
+    String payload = http.getString();
+    Serial.println("Respuesta de la API:");
+    Serial.println(payload);
+
+    // Crear un documento JSON dinámico para parsear la respuesta
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, payload);
+    if (error) {
+      Serial.print("Error al parsear JSON: ");
+      Serial.println(error.c_str());
+      http.end();
+      return false;
+    }
+
+    // Extraer el campo "timezone" del JSON
+    const char* timezone = doc["timezone"];
+    if (timezone && strlen(timezone) > 0) {
+      Serial.print("Zona horaria detectada: ");
+      Serial.println(timezone);
+
+      // Configurar la variable de entorno TZ y aplicar la configuración
+      setenv("TZ", timezone, 1);
+      tzset();
+
+      // Configurar NTP usando un offset fijo (por ejemplo, -18000 segundos para UTC-5)
+      // Nota: utcOffsetInSeconds debe estar declarado globalmente o definido previamente.
+      configTime(-18000, 0, "pool.ntp.org", "time.nist.gov");
+
+      http.end();
+      return true;
+    } else {
+      Serial.println("Campo 'timezone' no encontrado o vacío en la respuesta.");
+    }
+  } else {
+    Serial.print("Error al obtener la ubicación. Código HTTP: ");
+    Serial.println(httpCode);
+  }
+
+  http.end();
+  return false;
 }
 
 void localTimeSetUp() {
   // Sincronizar NTP con la zona horaria
+  if (timeConfigured || WiFi.status() != WL_CONNECTED){
+    return;
+  }
+  
   if (!fetchUtcOffset()) {
     Serial.println("No se pudo obtener la zona horaria. Usando UTC.");
     setenv("TZ", "UTC", 1); // Usar UTC si no se obtiene la zona horaria
@@ -70,13 +128,25 @@ void localTimeSetUp() {
   }
   
   // Verificar la sincronización de NTP
-  unsigned long startAttemptTime = millis();
+ /*  unsigned long startAttemptTime = millis();
   while (!timeClient.update()) {
     if (millis() - startAttemptTime > 5000) { // Timeout después de 5 segundos
       Serial.println("No se pudo sincronizar con el servidor NTP.");
       break;
     }
-    delay(1000); // Esperar 1 segundo y reintentar
+    vTaskDelay(1000 / portTICK_PERIOD_MS); // Esperar 1 segundo y reintentar
+  } */
+  uint64_t startAttemptTime =esp_timer_get_time();;  // Guardar el valor de millis() en uint64_t
+  uint64_t currentMillis;
+  
+  while (!timeClient.update()) {
+    currentMillis = esp_timer_get_time();;  // Obtener el tiempo actual con millis()
+    // Comparar correctamente considerando el desbordamiento
+    if ((currentMillis - startAttemptTime) > 5000000) {  // Timeout después de 5 segundos
+        Serial.println("No se pudo sincronizar con el servidor NTP.");
+        break;
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);  // Esperar 1 segundo y reintentar
   }
 
   struct tm timeInfo;
@@ -88,12 +158,14 @@ void localTimeSetUp() {
     Serial.println(timeString);
 
     baseTime = mktime(&timeInfo); // Hora y fecha inicial sincronizada
-    millisAtSync = millis();     // Guardar tiempo en millis()
-
+    millisAtSync = esp_timer_get_time();     // Guardar tiempo en millis()
+    timeConfigured = true;
     //displayInfoOnLCD("Fecha y Hora Local:", timeString);  // Mostrar en la LCD
   } else {
     Serial.println("No se pudo sincronizar la hora local.");
+    timeConfigured = false;
   }
+  getAdjustedTime();
 }
 
 String getAdjustedTime() {

@@ -48,18 +48,18 @@ void tareaProgramada1() {
     // Verificar si los datos son validos
     if(temperatureCDs18b20 == -127 || (isnan(temperatureCDs18b20))){
       Serial.println("Sensor DS18B20 no encontrado");
-      alertaOutSensorService("DS18B20", "sensor_failure");
+      //alertaOutSensorService("DS18B20", "sensor_failure");
       return;
     }
 
     if(isnan(temperaturaDHT) || isnan(humedad)){
       Serial.println("Sensor DHT no encontrado");
-      alertaOutSensorService("DHT", "sensor_failure");
+     // alertaOutSensorService("DHT", "sensor_failure");
       return;
     }
 
     // Verificar alertas
-    verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+    //verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
     
     // Verificar conexión WiFi y MQTT antes de publicar
     if (WiFi.status() == WL_CONNECTED && isMQTTConnected()) {
@@ -67,7 +67,7 @@ void tareaProgramada1() {
         Serial.println("Datos publicados exitosamente");
     } else {
         Serial.println("Sin conexión - Guardando datos para envío posterior");
-        saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+        saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
     }
     Serial.println("------------------------");
     timerTask1.once(24*60*60, tareaProgramada1);
@@ -88,25 +88,25 @@ void tareaProgramada2() {
     // Verificar si los datos son validos
     if(temperatureCDs18b20 == -127 || (isnan(temperatureCDs18b20))){
       Serial.println("Sensor DS18B20 no encontrado");
-      alertaOutSensorService("DS18B20", "sensor_failure");
+      //alertaOutSensorService("DS18B20", "sensor_failure");
       return;
     }
 
     if(isnan(temperaturaDHT) || isnan(humedad)){
       Serial.println("Sensor DHT no encontrado");
-      alertaOutSensorService("DHT", "sensor_failure");
+      //alertaOutSensorService("DHT", "sensor_failure");
       return;
     }
 
     // Verificar alertas
-    verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+    //verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
     // Verificar conexión WiFi y MQTT antes de publicar
     if (WiFi.status() == WL_CONNECTED && isMQTTConnected()) {
         publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
         Serial.println("Datos publicados exitosamente");
     } else {
         Serial.println("Sin conexión - Guardando datos para envío posterior");
-        saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+        saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
     }
     Serial.println("----------------------------------------");
     timerTask2.once(24*60*60, tareaProgramada2);
@@ -127,25 +127,25 @@ void tareaProgramada3() {
     // Verificar si los datos son validos
     if(temperatureCDs18b20 == -127 || (isnan(temperatureCDs18b20))){
       Serial.println("Sensor DS18B20 no encontrado");
-      alertaOutSensorService("DS18B20", "sensor_failure");
+      //alertaOutSensorService("DS18B20", "sensor_failure");
       return;
     }
 
     if(isnan(temperaturaDHT) || isnan(humedad)){
       Serial.println("Sensor DHT no encontrado");
-      alertaOutSensorService("DHT", "sensor_failure");
+      //alertaOutSensorService("DHT", "sensor_failure");
       return;
     }
 
     // Verificar alertas
-    verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+    //verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
     // Verificar conexión WiFi y MQTT antes de publicar
     if (WiFi.status() == WL_CONNECTED && isMQTTConnected()) {
         publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
         Serial.println("Datos publicados exitosamente");
     } else {
         Serial.println("Sin conexión - Guardando datos para envío posterior");
-        //saveDataToCSV("", getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 1);
+        saveDataToCSV("", getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
     }
     Serial.println("----------------------------------------");
     timerTask3.once(24*60*60, tareaProgramada3);
@@ -170,8 +170,8 @@ void startTimers(time_t adjustedTime) {
 
   // Tiempos programados en segundos desde el inicio del día
     unsigned long timeTo10PM = (8 * 3600) + (41 * 60);   // 22:00:00 (10:00 PM)
-    unsigned long timeTo5_15AM = (12 * 3600) + (50 * 60); // 05:15:00 (5:15 AM)
-    unsigned long timeTo8_10AM = (15 * 3600) + (45 * 60); // 08:10:00 (8:10 AM)
+    unsigned long timeTo5_15AM = (15 * 3600) + (10 * 60); // 05:15:00 (5:15 AM)
+    unsigned long timeTo8_10AM = (21 * 3600) + (30 * 60); // 08:10:00 (8:10 AM)
 
   // Lógica de reprogramación, ajustada para tareas del mismo día o día siguiente
   unsigned long remainingTime;

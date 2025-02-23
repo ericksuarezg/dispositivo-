@@ -3,6 +3,7 @@
 #include <LcdSetUp.h>
 
 const int oneWireBus=33; 
+//const int oneWireBus=35; 
 static bool ds18b20Configured = false;
 OneWire oneWire(oneWireBus);
 DallasTemperature sensors(&oneWire);
@@ -30,12 +31,13 @@ bool ds18b20SetUp(SemaphoreHandle_t lcdSemaphore){
     xSemaphoreGive(lcdSemaphore);
     return ds18b20Configured;
   }
+  
 }
 
 void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore,float &temperatureCDs18b20){  
   if (!ds18b20Configured || (temperatureCDs18b20== -127)) {
     Serial.println("Sensor DS18B20 no configurado. Saltando lectura.");
-    if (xSemaphoreTake(lcdSemaphore,3000 / portMAX_DELAY)==pdTRUE){
+    if (xSemaphoreTake(lcdSemaphore,3000 / portTICK_PERIOD_MS)==pdTRUE){
       displayInfoOnLCD(" Sensor DS18B20", "No configurado");
       vTaskDelay(2000 / portTICK_PERIOD_MS);
       ds18b20Configured = ds18b20SetUp(lcdSemaphore);
@@ -52,7 +54,7 @@ void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore,float &temperatureCDs
   sensors.requestTemperatures();
   temperatureCDs18b20 = sensors.getTempCByIndex(0);
   
-  if (xSemaphoreTake(lcdSemaphore, 5000 / portMAX_DELAY) == pdTRUE) {
+  if (xSemaphoreTake(lcdSemaphore, 5000 / portTICK_PERIOD_MS) == pdTRUE) {
     displayDataOnLCDofDbs18b20(temperatureCDs18b20);
     Serial.println("Temperatura DS18");
     Serial.print(temperatureCDs18b20);

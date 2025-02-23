@@ -8,7 +8,7 @@
 
 
 void setupSPIFFS() {
-    delay(1000);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     if (!SPIFFS.begin(true)) {
         Serial.println("Error inicializando SPIFFS");
         return;

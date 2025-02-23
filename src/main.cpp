@@ -26,6 +26,7 @@ void conectToInternet(void *pvParameters) {
     while (true) {
         Serial.println("verificando conexion a Wifi y Mqtt en ejecucion");
         reconectWiFi(lcdSemaphore);
+        localTimeSetUp();
         reconnect(lcdSemaphore);
         sendStoredData();
         CheckForMessages();
@@ -40,11 +41,11 @@ void Task2(void *pvParameters) {
     float humedad;
     float temperatureCDs18b20;
     float tempDHTMin = -25;
-    float tempDHTMax = 35;
+    float tempDHTMax = 85;
     float humidityMin = 10;
-    float humidityMax = 90;
+    float humidityMax = 110;
     float tempDS18Min = -25;
-    float tempDS18Max = 35;
+    float tempDS18Max = 85;
 
     setupSPIFFS();
     setUpLcd(wifiSemaphore);
@@ -53,7 +54,7 @@ void Task2(void *pvParameters) {
     configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
     
     unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 14400000; // 4 horas en milisegundos
+    unsigned long publishInterval = 10800000; // 1 horas en milisegundos
     //unsigned long publishInterval = 30000; // 4 horas en milisegundos
 
     unsigned long lastSaveTime = millis();
@@ -70,15 +71,15 @@ void Task2(void *pvParameters) {
         // Verificar intervalo de guardado
         if (currentTime - lastSaveTime >= saveInterval) {
             // Verificar Alertas
-            //saveDataToCSV(payload,getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
-            verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+            
+            //verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
             lastSaveTime = currentTime;
         }
         
         // Verificar intervalo de publicación
         if (currentTime - lastPublishTime >= publishInterval) {
             // Verificar alertas
-            verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+            //verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
         
             // Verificar conexión antes de publicar
             if (isWiFiConnected() && isMQTTConnected()) {
@@ -110,7 +111,7 @@ void setup() {
     xTaskCreatePinnedToCore(
         conectToInternet,           // Función de la tarea
         "conect to Internet",       // Nombre de la tarea
-        5000,            // Tamaño de la pila
+        7000,            // Tamaño de la pila
         NULL,            // Parámetros de la tarea
         1,               // Prioridad de la tarea
         &Task1Handle,1);   // Handle de la tarea
@@ -118,7 +119,7 @@ void setup() {
     xTaskCreatePinnedToCore(
         Task2,           // Función de la tarea
         "Tarea 2",       // Nombre de la tarea
-        5000,            // Tamaño de la pila
+        6000,            // Tamaño de la pila
         NULL,            // Parámetros de la tarea
         2,               // Prioridad de la tarea
         &Task2Handle,0);   // Handle de la tarea 
