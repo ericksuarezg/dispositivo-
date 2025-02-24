@@ -53,11 +53,11 @@ void Task2(void *pvParameters) {
     configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax);
     
     unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 600000; // 10 en minutos
+    unsigned long publishInterval = 1800000; // 10 en minutos
     //unsigned long publishInterval = 30000; // 4 horas en milisegundos
 
     unsigned long lastSaveTime = millis();
-    unsigned long saveInterval = 3000000; // 5 minutos en milisegundos
+    unsigned long saveInterval = 300000; // 5 minutos en milisegundos
 
     while (true) {
         UBaseType_t freeStack = uxTaskGetStackHighWaterMark(NULL);
@@ -78,7 +78,7 @@ void Task2(void *pvParameters) {
             verificarAlertas(temperaturaDHT, humedad);
             lastSaveTime = currentTime;
         }
-        /*
+        
         // Verificar intervalo de publicación
         if (currentTime - lastPublishTime >= publishInterval) {
             // Verificar alertas
@@ -100,7 +100,7 @@ void Task2(void *pvParameters) {
             
             lastPublishTime = currentTime;
         }    
-        */
+        
         
         vTaskDelay(1000 / portTICK_PERIOD_MS) ;  
     }  

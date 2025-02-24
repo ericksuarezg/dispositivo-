@@ -149,7 +149,7 @@ String getAdjustedTime() {
   time_t hourAsTimeT = mktime(&timeStruct);
   
   
-  startTimers(hourAsTimeT);
+  //startTimers(hourAsTimeT);
   // Retornar la fecha y hora en formato YYYY-MM-DD HH:MM:SS
   return String(timeString);
 }
