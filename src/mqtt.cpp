@@ -17,11 +17,11 @@ PubSubClient client(espClientSecure);
 
 //const char * mqtt_server= "192.168.18.10";// local
 const char * mqtt_server= "goblue.com.co";
-const char* mqtt_user = "NeveraPlayaAlta"; 
+const char* mqtt_user = "DeviceBana2025"; 
 //const char* mqtt_user = "Termo8936"; 
-const char* mqtt_password = "Nevera2025";
+const char* mqtt_password = "Banana2025";
 //const char* mqtt_password = "Termo2023";
-const char* mqtt_client_id = "679be8d3541507c16065c542";
+const char* mqtt_client_id = "679e99b7541507c1606678b1";
 //const char* mqtt_client_id = "6680422a40a2bf513dbce2df";
 //const int mqtt_port = 7080;
 const int mqtt_port = 8884; // mqtts
@@ -103,24 +103,25 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
       //client.subscribe("devices/" + mqtt_client_id + "/configuration");   // Nueva suscripción
       displayInfoOnLCD("   Conectado a",  mqtt_server);
       vTaskDelay(5000 / portTICK_PERIOD_MS);
-      xSemaphoreGive(lcdSemaphore); 
+      //xSemaphoreGive(lcdSemaphore); 
     } else {
       Serial.print("Fallo, rc=");
       Serial.print(client.state());
       Serial.println(" Intentando nuevamente en 5 segundos...");
       displayInfoOnLCD("intentando MQTT","nuevamente en 5 seg");
       vTaskDelay(5000 / portTICK_PERIOD_MS);
-      xSemaphoreGive(lcdSemaphore);
+      //xSemaphoreGive(lcdSemaphore);
     }
   }
+  xSemaphoreGive(lcdSemaphore);
 }
 
-bool publishData(String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18) {
-    Serial.print(temperaturaDS18);
-    delay(100);
+bool publishData(String date, String time, float temperaturaDHT, float humedadRelativa) {
+    Serial.print(temperaturaDHT);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
 
     // Verificar si los datos son válidos
-    if (isnan(temperaturaDHT) || isnan(humedadRelativa) || isnan(temperaturaDS18) || temperaturaDS18 == -127) {
+    if (isnan(temperaturaDHT) || isnan(humedadRelativa)) {
         Serial.println("Error: Datos inválidos. No se publicará información.");
         return false;
     }
@@ -129,7 +130,7 @@ bool publishData(String date, String time, float temperaturaDHT, float humedadRe
     String clientId = String(mqtt_client_id);
 
     // Crear manualmente el JSON como cadena
-    String jsonString = "{";
+    String  jsonString = "{";
     jsonString += "\"typeMessage\":\"messageCurrent\",";
     jsonString += "\"deviceId\":\"" + clientId + "\",";
     jsonString += "\"data\":{";
@@ -137,18 +138,16 @@ bool publishData(String date, String time, float temperaturaDHT, float humedadRe
     jsonString += "\"Fecha lectura\",";
     jsonString += "\"Hora de lectura\",";
     jsonString += "\"Temperatura Ambiente\",";
-    jsonString += "\"Humedad Ambiente\",";
-    jsonString += "\"Temperatura Nevera\"";
+    jsonString += "\"Humedad Ambiente\"";
     jsonString += "],";
     jsonString += "\"body\":[";
     jsonString += "\"" + date + "\",";
     jsonString += "\"" + time + "\",";
     jsonString += String(temperaturaDHT) + ",";
-    jsonString += String(humedadRelativa) + ",";
-    jsonString += String(temperaturaDS18);
+    jsonString += String(humedadRelativa);
     jsonString += "]";
     jsonString += "}";
-    jsonString += "}";
+    jsonString += "}"; 
 
     // Imprimir la cadena JSON que se enviará
     Serial.println("ESTO ES LO QUE VOY A ENVIAR: " + jsonString);

@@ -55,7 +55,7 @@ void displayDataOnLCD(float temperature, float humidity,float temperatureCDs18b2
   lcd.print("HR: ");
   lcd.print(humidity);
   lcd.print("%");
-  delay(2000);
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Temp DS18:");

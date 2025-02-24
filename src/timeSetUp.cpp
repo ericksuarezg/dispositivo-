@@ -76,7 +76,7 @@ void localTimeSetUp() {
       Serial.println("No se pudo sincronizar con el servidor NTP.");
       break;
     }
-    delay(1000); // Esperar 1 segundo y reintentar
+    vTaskDelay(1000 / portTICK_PERIOD_MS); // Esperar 1 segundo y reintentar
   }
 
   struct tm timeInfo;
@@ -149,7 +149,7 @@ String getAdjustedTime() {
   time_t hourAsTimeT = mktime(&timeStruct);
   
   
-  //startTimers(hourAsTimeT);
+  startTimers(hourAsTimeT);
   // Retornar la fecha y hora en formato YYYY-MM-DD HH:MM:SS
   return String(timeString);
 }

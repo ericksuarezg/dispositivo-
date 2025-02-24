@@ -6,7 +6,6 @@ String lowRange = "Bajo";
 String highRange = "Alto";
 String externTemp = "Temperatura Ambiente";
 String externHumidity = "Humedad Relativa";
-String externTempDS18 = "Temperatura DS18B20";
 
 
 // Estructura para almacenar los límites de las alertas
@@ -15,26 +14,21 @@ struct AlertLimits {
     float tempDHTMax = 0.0;
     float humidityMin = 0.0;
     float humidityMax = 0.0;
-    float tempDS18Min = 0.0;
-    float tempDS18Max = 0.0;
 };
 
 AlertLimits alertLimits;
 
 // Función para configurar los límites de las alertas
 void configurarAlertas(float tempDHTMin, float tempDHTMax, 
-                      float humidityMin, float humidityMax,
-                      float tempDS18Min, float tempDS18Max) {
+                      float humidityMin, float humidityMax) {
     alertLimits.tempDHTMin = tempDHTMin;
     alertLimits.tempDHTMax = tempDHTMax;
     alertLimits.humidityMin = humidityMin;
     alertLimits.humidityMax = humidityMax;
-    alertLimits.tempDS18Min = tempDS18Min;
-    alertLimits.tempDS18Max = tempDS18Max;
 }
 
 // Función para verificar y generar alertas
-void verificarAlertas(float tempDHT, float humidity, float tempDS18) {
+void verificarAlertas(float tempDHT, float humidity) {
     // Verificar temperatura DHT
     if (tempDHT < alertLimits.tempDHTMin) {
         
@@ -54,14 +48,6 @@ void verificarAlertas(float tempDHT, float humidity, float tempDS18) {
         publishAlerts(getDateSeparate(), getTimeSeparate(), highRange, externHumidity, humidity);
     }
 
-    // Verificar temperatura DS18B20
-    if (tempDS18 < alertLimits.tempDS18Min) {
-        Serial.println("¡ALERTA! Temperatura DS18B20 muy baja: " + String(tempDS18) + "°C");
-        publishAlerts(getDateSeparate(), getTimeSeparate(), lowRange, externTempDS18, tempDS18);
-    } else if (tempDS18 > alertLimits.tempDS18Max) {
-        Serial.println("¡ALERTA! Temperatura DS18B20 muy alta: " + String(tempDS18) + "°C");
-        publishAlerts(getDateSeparate(), getTimeSeparate(), highRange, externTempDS18, tempDS18);
-    }
 }
 
 void alertaOutSensorService(String sensorName, String messageSensorOutService){

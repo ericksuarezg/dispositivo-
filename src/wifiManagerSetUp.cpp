@@ -23,7 +23,6 @@ void setUpWifi(SemaphoreHandle_t wifiSemaphore,SemaphoreHandle_t lcdSemaphore) {
     displayInfoOnLCD("wifi:conectado", WiFi.RSSI() == 0 ? "RSSI: 0" : String(WiFi.RSSI()).c_str());
     localTimeSetUp(); //configura la hora local
     getAdjustedTime(); // Devuelve la hora ajustada segun millis
-    
     wifiConnected = true;
   }else{
     Serial.println("Tiempo de espera agotado para conectar a WiFi");
@@ -52,6 +51,7 @@ void reconectWiFi(SemaphoreHandle_t lcdSemaphore) {
         displayInfoOnLCD("Reconexión fallida", "Intentando luego...");
       }
       xSemaphoreGive(lcdSemaphore);
+      vTaskDelay(2000/ portTICK_PERIOD_MS);
     }
   } else if (WiFi.status() != WL_CONNECTED) {
     if (xSemaphoreTake(lcdSemaphore, 5000 / portTICK_PERIOD_MS) == pdTRUE) {

@@ -8,11 +8,12 @@
 
 
 void setupSPIFFS() {
-    delay(1000);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     if (!SPIFFS.begin(true)) {
         Serial.println("Error inicializando SPIFFS");
         return;
     }
+    //SPIFFS.remove("/deviceDataSensor.csv");
     Serial.println("SPIFFS Configurado exitosamente.");
 
 }
@@ -65,9 +66,9 @@ void setupSPIFFS() {
 }
  */
 
-void saveDataToCSV(String payload, String datePart, String timePart, float tempDHT, float humedad, float tempDS18B20, int toSend) {
+void saveDataToCSV(String payload, String datePart, String timePart, float tempDHT, float humedad, int toSend) {
     // Validar datos de los sensores
-    if (isnan(tempDHT) || isnan(humedad) || isnan(tempDS18B20) || tempDS18B20 == -127) {
+    if (isnan(tempDHT) || isnan(humedad)) {
         Serial.println("Error: Datos inválidos. No se almacenará información.");
         return;
     }
@@ -80,7 +81,7 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
     }
 
     // Crear línea de datos reducida
-    String dataLine = datePart + "," + timePart + "," + String(tempDHT) + "," + String(humedad) + "," + String(tempDS18B20) + ",0";
+    String dataLine = datePart + "," + timePart + "," + String(tempDHT) + "," + String(humedad) + ",0";
     
     // Guardar en archivo y cerrar
     file.println(dataLine);
@@ -226,24 +227,23 @@ void sendStoredData() {
         }
         values.push_back(line.substring(start));
 
-        if (values.size() != 6) {
+        if (values.size() != 5) {
             Serial.println("Línea con formato incorrecto: " + line);
             pendingLines.push_back(line);
             allDataSent = false;
             continue;
         }
 
-        int sent = values[5].toInt();
+        int sent = values[4].toInt();
 
         if (sent == 0 && isMQTTConnected()) {
             String datePart = values[0];
             String timePart = values[1];
             float tempDHT = values[2].toFloat();
             float humedad = values[3].toFloat();
-            float tempDS18B20 = values[4].toFloat();
 
             // Enviar datos
-            if (publishData(datePart, timePart, tempDHT, humedad, tempDS18B20)) {
+            if (publishData(datePart, timePart, tempDHT, humedad)) {
                 Serial.println("Datos enviados correctamente: " + line);
             } else {
                 Serial.println("Error al enviar datos, se conservarán.");

@@ -3,7 +3,6 @@
 #include <LcdSetUp.h>
 #include <mqtt.h>
 #include <dthSetUp.h>
-#include <ds18b20SetUp.h>
 #include <timeSetUp.h>
 #include "freertos/semphr.h" 
 #include <storage.h>
@@ -24,7 +23,12 @@ void conectToInternet(void *pvParameters) {
     mqttSetUp(lcdSemaphore);
     //xSemaphoreGive(wifiSemaphore);
     while (true) {
+        UBaseType_t freeStack = uxTaskGetStackHighWaterMark(NULL);
+        Serial.print("Pila libre en conectToInternet: ");
+        Serial.println(freeStack);
         Serial.println("verificando conexion a Wifi y Mqtt en ejecucion");
+        Serial.print("Heap libre en conectToInternet: ");
+        Serial.println(ESP.getFreeHeap());
         reconectWiFi(lcdSemaphore);
         reconnect(lcdSemaphore);
         sendStoredData();
@@ -38,31 +42,31 @@ void conectToInternet(void *pvParameters) {
 void Task2(void *pvParameters) {
     float temperaturaDHT;
     float humedad;
-    float temperatureCDs18b20;
-    float tempDHTMin = -25;
-    float tempDHTMax = 40;
-    float humidityMin = 10;
-    float humidityMax = 90;
-    float tempDS18Min = -20;
-    float tempDS18Max = -3;
+    float tempDHTMin = 15;
+    float tempDHTMax = 41;
+    float humidityMin = 40;
+    float humidityMax = 98;
 
     setupSPIFFS();
     setUpLcd(wifiSemaphore);
-    dthSensorsetUp();
-    ds18b20SetUp(lcdSemaphore);
-    configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
+    dthSensorsetUp(lcdSemaphore);
+    configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax);
     
     unsigned long lastPublishTime = millis();
     unsigned long publishInterval = 600000; // 10 en minutos
     //unsigned long publishInterval = 30000; // 4 horas en milisegundos
 
     unsigned long lastSaveTime = millis();
-    unsigned long saveInterval = 300000; // 5 minutos en milisegundos
+    unsigned long saveInterval = 3000000; // 5 minutos en milisegundos
 
     while (true) {
+        UBaseType_t freeStack = uxTaskGetStackHighWaterMark(NULL);
+        Serial.print("Pila libre en Task2: ");
+        Serial.println(freeStack);
+        Serial.print("Heap libre en Task2: ");
+        Serial.println(ESP.getFreeHeap());
         vTaskDelay(2000 / portTICK_PERIOD_MS);  // Espera de 2 segundos
         Serial.println("ejecutando lectura de sensores");
-        ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
         updateClockDisplay(lcdSemaphore);
           // Almacenar datos periódicamente
@@ -71,31 +75,32 @@ void Task2(void *pvParameters) {
         if (currentTime - lastSaveTime >= saveInterval) {
             // Verificar Alertas
             //saveDataToCSV(payload,getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
-            verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+            verificarAlertas(temperaturaDHT, humedad);
             lastSaveTime = currentTime;
         }
-        
+        /*
         // Verificar intervalo de publicación
         if (currentTime - lastPublishTime >= publishInterval) {
             // Verificar alertas
-            verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
+            verificarAlertas(temperaturaDHT, humedad);
 
             
             // Verificar conexión antes de publicar
             if (isWiFiConnected() && isMQTTConnected()) {
                 // Publica los datos
-                publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
+                publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad);
                 //sendStoredData();
                 // Guardar datos con bandera 1 (para enviar)
                 //saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
                 lastPublishTime = currentTime;
             } else {
                 Serial.println("Sin conexión - Datos guardados para envío posterior");
-                saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
+                saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, 0);
             }
             
             lastPublishTime = currentTime;
         }    
+        */
         
         vTaskDelay(1000 / portTICK_PERIOD_MS) ;  
     }  
@@ -112,7 +117,7 @@ void setup() {
     xTaskCreatePinnedToCore(
         conectToInternet,           // Función de la tarea
         "conect to Internet",       // Nombre de la tarea
-        5000,            // Tamaño de la pila
+        7000,            // Tamaño de la pila
         NULL,            // Parámetros de la tarea
         1,               // Prioridad de la tarea
         &Task1Handle,1);   // Handle de la tarea
@@ -120,7 +125,7 @@ void setup() {
     xTaskCreatePinnedToCore(
         Task2,           // Función de la tarea
         "Tarea 2",       // Nombre de la tarea
-        5000,            // Tamaño de la pila
+        7000,            // Tamaño de la pila
         NULL,            // Parámetros de la tarea
         2,               // Prioridad de la tarea
         &Task2Handle,0);   // Handle de la tarea 

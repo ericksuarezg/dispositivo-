@@ -11,7 +11,6 @@ extern Ticker timerTask1;
 extern Ticker timerTask2;
 extern Ticker timerTask3;
 
-float getTemperatureCDs18b20();
 float getTemperaturaDHT();
 float getHumedad();
 
