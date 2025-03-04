@@ -9,6 +9,10 @@
 #include "mqtt.h"
 #include "WiFiManager.h"
 #include <SPIFFS.h>
+//#include <Ticker.h>
+
+bool initTimers= false;
+int lastProgrammedDay = -1; // Guarda el último día en el que se programaron tareas
 
 
 float getTemperatureCDs18b20() {
@@ -157,10 +161,21 @@ void tareaProgramada3() {
 // Función que ajusta la tarea programada en base al tiempo ajustado (ahora con un parámetro)
 void startTimers(time_t adjustedTime) {
   struct tm* timeInfo = localtime(&adjustedTime);
-
   int baseHour = timeInfo->tm_hour;
   int baseMinute = timeInfo->tm_min;
   int baseSecond = timeInfo->tm_sec;
+
+  int currentDay = timeInfo->tm_mday; // Obtener el día del mes actual
+  Serial.printf("dia de hoy: ");
+  Serial.print(currentDay);
+  Serial.printf("dia configurado: ");
+  Serial.print(lastProgrammedDay);
+
+  if (initTimers && lastProgrammedDay == currentDay) {
+    Serial.print("los temporizadores ya fueron inicializados hoy");
+    return;
+  }
+  
 
   Serial.print("Hora actual: ");
   Serial.printf("%02d:%02d:%02d\n", baseHour, baseMinute, baseSecond);
@@ -169,9 +184,9 @@ void startTimers(time_t adjustedTime) {
   unsigned long secondsFromStartOfDay = (baseHour * 3600) + (baseMinute * 60) + baseSecond;
 
   // Tiempos programados en segundos desde el inicio del día
-    unsigned long timeTo10PM = (8 * 3600) + (41 * 60);   // 22:00:00 (10:00 PM)
-    unsigned long timeTo5_15AM = (15 * 3600) + (10 * 60); // 05:15:00 (5:15 AM)
-    unsigned long timeTo8_10AM = (21 * 3600) + (30 * 60); // 08:10:00 (8:10 AM)
+    unsigned long timeTo10PM = (8 * 3600) + (30 * 60);   // 22:00:00 (10:00 PM)
+    unsigned long timeTo5_15AM = (16 * 3600) + (30 * 60); // 05:15:00 (5:15 AM)
+    unsigned long timeTo8_10AM = (20 * 3600) + (30 * 60); // 08:10:00 (8:10 AM)
 
   // Lógica de reprogramación, ajustada para tareas del mismo día o día siguiente
   unsigned long remainingTime;
@@ -203,4 +218,6 @@ void startTimers(time_t adjustedTime) {
     }
     timerTask3.once(remainingTime, tareaProgramada3);
     Serial.printf("Tarea 3 programada para ejecutarse en %lu segundos\n", remainingTime);
-}
+    lastProgrammedDay = currentDay; // Actualizar el día programado
+    initTimers=true;
+} 

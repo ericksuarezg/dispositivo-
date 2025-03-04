@@ -10,6 +10,7 @@
 #include "timeSetUp.h"
 
 // Variables globales
+static TickType_t lastSyncTicks = 0;
 time_t baseTime = 0;
 unsigned long millisAtSync = 0;
 long utcOffsetInSeconds = -18000; // Zona horaria de Bogotá, UTC -5 horas (-18000 segundos)
@@ -168,7 +169,7 @@ void localTimeSetUp() {
   getAdjustedTime();
 }
 
-String getAdjustedTime() {
+/* String getAdjustedTime() {
   if (baseTime == 0) {
     return "Hora no sincronizada";
   }
@@ -224,6 +225,53 @@ String getAdjustedTime() {
   startTimers(hourAsTimeT);
   // Retornar la fecha y hora en formato YYYY-MM-DD HH:MM:SS
   return String(timeString);
+} */
+String getAdjustedTime() {
+  if (baseTime == 0) {
+    return "Hora no sincronizada";
+  }
+
+  // Obtener el tiempo actual con xTaskGetTickCount()
+  TickType_t currentTicks = xTaskGetTickCount();
+  TickType_t elapsedTicks = currentTicks - lastSyncTicks;
+  time_t elapsedSeconds = elapsedTicks / configTICK_RATE_HZ;
+
+  // Si el desajuste es demasiado grande, re-sincronizar
+  if (elapsedSeconds > 2000) {  
+    baseTime = time(nullptr);  // Sincroniza baseTime con la hora real
+    lastSyncTicks = xTaskGetTickCount();  // Reinicia lastSyncTicks
+    Serial.println("Re-sincronizando hora...");
+  }
+
+  // Obtener el tiempo ajustado (baseTime + tiempo transcurrido)
+  time_t adjustedTime = baseTime + elapsedSeconds;
+
+  // Convertir el tiempo ajustado a una estructura de tiempo para formateo
+  struct tm* adjustedTimeInfo = localtime(&adjustedTime);
+
+  // Formato adecuado para la fecha y hora completa (Año-Mes-Día Hora:Minuto:Segundo)
+  char timeString[30];
+  strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", adjustedTimeInfo);
+
+  // Extraer solo la hora (Hora:Minuto:Segundo)
+  char hourString[10];
+  strftime(hourString, sizeof(hourString), "%H:%M:%S", adjustedTimeInfo);
+
+  // Convertir hourString en time_t
+  int hour, minute, second;
+  sscanf(hourString, "%d:%d:%d", &hour, &minute, &second);
+
+  // Copiar información existente del adjustedTimeInfo para no perder la fecha
+  struct tm timeStruct = *adjustedTimeInfo;
+  timeStruct.tm_hour = hour;
+  timeStruct.tm_min = minute;
+  timeStruct.tm_sec = second;
+
+  // Convertir a time_t
+  time_t hourAsTimeT = mktime(&timeStruct);
+  startTimers(hourAsTimeT);
+
+  return String(timeString);
 }
 
 void updateClockDisplay(SemaphoreHandle_t lcdSemaphore) {
@@ -232,6 +280,7 @@ void updateClockDisplay(SemaphoreHandle_t lcdSemaphore) {
   Serial.println(currentTime);
   if (xSemaphoreTake(lcdSemaphore,5000/portTICK_PERIOD_MS)==pdTRUE){
     displayInfoOnLCD("Fecha       Hora", currentTime.c_str());
+    vTaskDelay(pdMS_TO_TICKS(2000));
     xSemaphoreGive(lcdSemaphore);
   }
 }

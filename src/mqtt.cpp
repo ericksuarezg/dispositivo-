@@ -17,9 +17,9 @@ PubSubClient client(espClientSecure);
 
 
 const char * mqtt_server= "";
-const char* mqtt_user = ""; 
  
-const char* mqtt_password = ""; 
+const char* mqtt_user = ""; 
+const char* mqtt_password = "";
 const char* mqtt_client_id = "";
 const int mqtt_port = 8884; 
 

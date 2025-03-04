@@ -53,31 +53,27 @@ void Task2(void *pvParameters) {
     ds18b20SetUp(lcdSemaphore);
     configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
     
-    unsigned long lastPublishTime = millis();
-    unsigned long publishInterval = 10800000; // 1 horas en milisegundos
-    //unsigned long publishInterval = 30000; // 4 horas en milisegundos
-
-    unsigned long lastSaveTime = millis();
-    unsigned long saveInterval = 180000; // 3 minutos en milisegundos
-
+    TickType_t lastWakeTime = xTaskGetTickCount();
+    static TickType_t lastSaveTime = lastWakeTime;
+    static TickType_t lastPublishTime = lastWakeTime;
+    const TickType_t publishInterval = 10800000; // 1 horas en milisegundos
+    const TickType_t saveInterval = 180000; // 3 minutos en milisegundos
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     while (true) {
-        vTaskDelay(2000 / portTICK_PERIOD_MS);  // Espera de 2 segundos
         Serial.println("ejecutando lectura de sensores");
         ds18b20ReadTemperature(lcdSemaphore,temperatureCDs18b20);
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
         updateClockDisplay(lcdSemaphore);
           // Almacenar datos periódicamente
-        unsigned long currentTime = millis();
         // Verificar intervalo de guardado
-        if (currentTime - lastSaveTime >= saveInterval) {
+        if (xTaskGetTickCount() - lastSaveTime >= saveInterval) {
             // Verificar Alertas
             
             //verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
-            lastSaveTime = currentTime;
+            lastSaveTime = xTaskGetTickCount();
         }
         
-        // Verificar intervalo de publicación
-        if (currentTime - lastPublishTime >= publishInterval) {
+        if (xTaskGetTickCount() - lastPublishTime >= publishInterval) {
             // Verificar alertas
             //verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
         
@@ -88,15 +84,15 @@ void Task2(void *pvParameters) {
                 //sendStoredData();
                 // Guardar datos con bandera 1 (para enviar)
                 //saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
-                lastPublishTime = currentTime;
             } else {
                 Serial.println("Sin conexión - Datos guardados para envío posterior");
                 saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
             }
-            lastPublishTime = currentTime;
+            lastPublishTime = xTaskGetTickCount();
         }    
         
-        vTaskDelay(1000 / portTICK_PERIOD_MS) ;  
+        //vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(3000));  
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
     }  
 }
 
