@@ -15,13 +15,44 @@
 WiFiClientSecure espClientSecure;
 PubSubClient client(espClientSecure);
 
-
-const char * mqtt_server= "";
- 
-const char* mqtt_user = ""; 
-const char* mqtt_password = "";
-const char* mqtt_client_id = "";
-const int mqtt_port = 8884; 
+//const char * mqtt_server= "192.168.18.10";// local
+const char * mqtt_server= "aguisu.com";
+//const char* mqtt_user = "Studio23"; // camila ramos 
+const char* mqtt_user = "Termo8936"; // gladis prueba 
+//const char* mqtt_user = "LicethFig2025"; //liceht figeroa (annie) 
+//const char* mqtt_user = "Fabionoe2025"; // fabio noe 
+//const char* mqtt_user = "Labgiovana2025"; // giovana savogal 
+//const char* mqtt_user = "TermoArmonia2025*"; // Armonia Dental  
+//const char* mqtt_user = "Convexa001"; // juan pablo ramirez  
+//const char* mqtt_user = "Termoliceth01"; // liceth lara  
+//const char* mqtt_user = "Diana2025"; // Diana Aguilar  
+//const char* mqtt_user = "Santamaria2025"; // Santamaria 
+//const char* mqtt_user = "Mendez01"; // Mauricio Mendez  
+//const char* mqtt_password = "Studio23"; // camila Ramos 
+const char* mqtt_password = "Termo2023";//gladis prueba
+//const char* mqtt_password = "LicethFig2025";//liceth figueroa (Annie)
+//const char* mqtt_password = "Fabionoe2025";//fabio noe
+//const char* mqtt_password = "Labgiovana2025";//giovana savogal
+//const char* mqtt_password = "TermoArmonia2025*";//Armonia dental
+//const char* mqtt_password = "Convexa001";//juan pablo ramirez
+//const char* mqtt_password = "Termoliceth01";//liceth lara
+//const char* mqtt_password = "Diana2025";//Diana Aguilar
+//const char* mqtt_password = "Santamaria2025";//SantaMaria
+//const char* mqtt_password = "Mendez01";// mauricio mendez
+//const char* mqtt_client_id = "679a32069fe20cce0f68ad9f";// camila Ramos
+const char* mqtt_client_id = "6680422a40a2bf513dbce2df";// Gladis prueba 
+//const char* mqtt_client_id = "682e9194a921582ebf58d455";// liceth figeroa  
+//const char* mqtt_client_id = "67f6d26fa921582ebf5851f3";// fabio noe 
+//const char* mqtt_client_id = "67f6d431a921582ebf585211";// giovana savogal 
+//const char* mqtt_client_id = "680e3684a921582ebf588adb";// Armonia dental
+//const char* mqtt_client_id = "67dbfc15a921582ebf582359";// juan pablo ramirez 
+//const char* mqtt_client_id = "67e3ef32a921582ebf5834c1";// liceth lara
+//const char* mqtt_client_id = "67dd4aeda921582ebf5824f4";// Diana Aguilar
+//const char* mqtt_client_id = "67c4a1d22a4d94d4af7d43be";// Santa Maria
+//const char* mqtt_client_id = "67a8f727dabe7a7d86f62150";// Mauricio Mendez  
+//const int mqtt_port = 7080; 
+const int mqtt_port = 8884; // mqtts
+//const int mqtt_port = 3251; // puerto local
 
 bool mqttConnected = false;
 
@@ -109,7 +140,7 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
      // xSemaphoreGive(lcdSemaphore);
     }
   }
-  xSemaphoreGive(lcdSemaphore);
+  xSemaphoreGive(lcdSemaphore); 
 }
 
 bool publishData(String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18) {

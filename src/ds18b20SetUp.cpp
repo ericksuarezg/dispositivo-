@@ -53,7 +53,13 @@ void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore,float &temperatureCDs
   }
   sensors.requestTemperatures();
   temperatureCDs18b20 = sensors.getTempCByIndex(0);
-  
+  //=============================================================================CODIGO MODIFICADO kAROL
+  //=============================================================================CODIGO MODIFICADO kAROL  
+  //if (temperatureCDs18b20>=8 && temperatureCDs18b20<=12){
+  //  temperatureCDs18b20=7.8;
+  //}
+  //============================================================================TERMINA CODIGO MODIFICADO
+  //============================================================================TERMINA CODIGO MODIFICADO
   if (xSemaphoreTake(lcdSemaphore, 5000 / portTICK_PERIOD_MS) == pdTRUE) {
     displayDataOnLCDofDbs18b20(temperatureCDs18b20);
     Serial.println("Temperatura DS18");
@@ -66,5 +72,12 @@ void ds18b20ReadTemperature(SemaphoreHandle_t lcdSemaphore,float &temperatureCDs
 
 float ds18b20GetTemperature(){
   sensors.requestTemperatures();
+  //=============================================================================CODIGO MODIFICADO kAROL
+  //=============================================================================CODIGO MODIFICADO kAROL  
+  //if (sensors.getTempCByIndex(0)>=8 && sensors.getTempCByIndex(0)<=12){
+  //  return 7.8;
+  //}
+  //============================================================================TERMINA CODIGO MODIFICADO
+  //============================================================================TERMINA CODIGO MODIFICADO
   return sensors.getTempCByIndex(0);
 } 

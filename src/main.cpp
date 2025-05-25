@@ -36,7 +36,7 @@ void conectToInternet(void *pvParameters) {
 
 
 // Función para la segunda tarea
-void Task2(void *pvParameters) {
+void Task2(void *pvParameters) { 
     float temperaturaDHT;
     float humedad;
     float temperatureCDs18b20;
@@ -54,8 +54,8 @@ void Task2(void *pvParameters) {
     configurarAlertas(tempDHTMin, tempDHTMax, humidityMin, humidityMax, tempDS18Min, tempDS18Max);
     
     TickType_t lastWakeTime = xTaskGetTickCount();
-    static TickType_t lastSaveTime = lastWakeTime;
-    static TickType_t lastPublishTime = lastWakeTime;
+    TickType_t lastSaveTime = lastWakeTime;
+    TickType_t lastPublishTime = lastWakeTime;
     const TickType_t publishInterval = 10800000; // 1 horas en milisegundos
     const TickType_t saveInterval = 180000; // 3 minutos en milisegundos
     vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -65,7 +65,7 @@ void Task2(void *pvParameters) {
         dhtReading(lcdSemaphore,temperaturaDHT,humedad);
         updateClockDisplay(lcdSemaphore);
           // Almacenar datos periódicamente
-        // Verificar intervalo de guardado
+        // Verificar intervalo de guardado  
         if (xTaskGetTickCount() - lastSaveTime >= saveInterval) {
             // Verificar Alertas
             
@@ -78,7 +78,7 @@ void Task2(void *pvParameters) {
             //verificarAlertas(temperaturaDHT, humedad, temperatureCDs18b20);
         
             // Verificar conexión antes de publicar
-            if (isWiFiConnected() && isMQTTConnected()) {
+            if (isWiFiConnected() && isMQTTConnected()) { 
                 // Publica los datos
                 publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
                 //sendStoredData();

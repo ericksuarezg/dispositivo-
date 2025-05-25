@@ -208,7 +208,7 @@ void sendStoredData() {
     std::vector<String> pendingLines;
     bool allDataSent = true;
 
-    // Leer el archivo línea por línea
+    // Leer el archivo línea por línea 
     while (file.available()) {
         String line = file.readStringUntil('\n');
         line.trim(); // Eliminar espacios y saltos de línea

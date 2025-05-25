@@ -48,7 +48,6 @@ bool dthSensorsetUp() {
     // Mostrar en LCD
     displayInfoOnLCD("  Configurando", "     DHT22");
     vTaskDelay(2000 / portTICK_PERIOD_MS);
-
     // Intentar primera lectura para validar sensor
     int chk = DHT.read22(DHT_PIN);
     
@@ -187,7 +186,7 @@ void dhtReading(SemaphoreHandle_t lcdSemaphore, float &temperaturaDHT, float &hu
         return;
     }
 
-    temperaturaDHT = DHT.temperature;
+    temperaturaDHT = DHT.temperature-1.6;
     humedad = DHT.humidity;
     Serial.print("\U0001F321️ Temperatura DHT: "); Serial.println(temperaturaDHT);
     Serial.print("\U0001F4A7 Humedad: "); Serial.println(humedad);
@@ -212,7 +211,7 @@ float dhtGetTemperature() {
     for (int i = 0; i < 3; i++) {  // Intentar hasta 3 veces
         int chk = DHT.read22(DHT_PIN);
         if (chk == DHTLIB_OK) {
-            return DHT.temperature;
+            return DHT.temperature-1.6;
         }
         Serial.println("⚠️ Error en la lectura de temperatura, reintentando...");
         vTaskDelay(2000 / portTICK_PERIOD_MS); // Esperar 2 segundos antes de reintentar

@@ -45,7 +45,7 @@ void tareaProgramada1() {
     float temperaturaDHT;
     float humedad;
     //trae la temperatura del ds18b20 y del dht
-    temperatureCDs18b20 = ds18b20GetTemperature();
+    temperatureCDs18b20 = ds18b20GetTemperature(); 
     temperaturaDHT = dhtGetTemperature();
     humedad = dhtGetHumidity();
 

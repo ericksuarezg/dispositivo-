@@ -115,7 +115,7 @@ bool fetchUtcOffset() {
   return false;
 }
 
-void localTimeSetUp() {
+/* void localTimeSetUp() {
   // Sincronizar NTP con la zona horaria
   if (timeConfigured || WiFi.status() != WL_CONNECTED){
     return;
@@ -127,16 +127,7 @@ void localTimeSetUp() {
     tzset();
     configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   }
-  
-  // Verificar la sincronización de NTP
- /*  unsigned long startAttemptTime = millis();
-  while (!timeClient.update()) {
-    if (millis() - startAttemptTime > 5000) { // Timeout después de 5 segundos
-      Serial.println("No se pudo sincronizar con el servidor NTP.");
-      break;
-    }
-    vTaskDelay(1000 / portTICK_PERIOD_MS); // Esperar 1 segundo y reintentar
-  } */
+
   uint64_t startAttemptTime =esp_timer_get_time();;  // Guardar el valor de millis() en uint64_t
   uint64_t currentMillis;
   
@@ -167,7 +158,45 @@ void localTimeSetUp() {
     timeConfigured = false;
   }
   getAdjustedTime();
+} */ 
+
+void localTimeSetUp() {
+  // Sincronizar NTP con la zona horaria
+  if (timeConfigured || WiFi.status() != WL_CONNECTED){
+    return;
+  }
+  
+  if (!fetchUtcOffset()) {
+    Serial.println("No se pudo obtener la zona horaria. Usando UTC.");
+    setenv("TZ", "America/Bogota", 1);
+    tzset();
+    configTime(-18000, 0, "pool.ntp.org", "time.nist.gov");
+  }
+  
+  // Esperar hasta que la hora se sincronice
+  struct tm timeInfo;
+  uint64_t startAttemptTime = esp_timer_get_time();
+  while (!getLocalTime(&timeInfo)) {
+    uint64_t currentMillis = esp_timer_get_time();
+    if ((currentMillis - startAttemptTime) > 5000000) {  // Timeout después de 5 segundos
+      Serial.println("No se pudo sincronizar la hora local.");
+      timeConfigured = false;
+      return;
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+
+  // Mostrar la fecha y hora sincronizada
+  char timeString[20];
+  strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", &timeInfo);
+  Serial.print("Fecha y hora local sincronizada: ");
+  Serial.println(timeString);
+
+  baseTime = mktime(&timeInfo);  // Guardar tiempo inicial
+  millisAtSync = esp_timer_get_time();
+  timeConfigured = true;
 }
+
 
 /* String getAdjustedTime() {
   if (baseTime == 0) {
