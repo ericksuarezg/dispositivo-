@@ -1,7 +1,7 @@
 #include <freertos/FreeRTOS.h> 
 #include <freertos/semphr.h> 
-void mqttSetUp(SemaphoreHandle_t lcdSemaphore);
-void reconnect(SemaphoreHandle_t lcdSemaphore);
+void mqttSetUp(SemaphoreHandle_t lcdSemaphore,TaskHandle_t TaskSendHandle);
+void reconnect(SemaphoreHandle_t lcdSemaphore, TaskHandle_t TaskSendHandle);
 void CheckForMessages();
 bool publishData(String date, String time, float temperaturaDHT,float humedadRelativa, float temperaturaDS18);
 bool isMQTTConnected();

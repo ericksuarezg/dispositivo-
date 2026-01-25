@@ -14,21 +14,26 @@
 TaskHandle_t Task1Handle = NULL;
 TaskHandle_t Task2Handle = NULL;
 
+TaskHandle_t TaskSendHandle = NULL;
+
+
 // Declarar el semáforo para WiFi
 SemaphoreHandle_t wifiSemaphore;
 // declarar semaforo para lcd 
 SemaphoreHandle_t lcdSemaphore;
+//semaforo para controlar el acceso a SPIFF 
+SemaphoreHandle_t spiffsMutex;
+
 // Función para la primera tarea
 void conectToInternet(void *pvParameters) {
     setUpWifi(wifiSemaphore,lcdSemaphore);
-    mqttSetUp(lcdSemaphore);
+    mqttSetUp(lcdSemaphore, TaskSendHandle);
     //xSemaphoreGive(wifiSemaphore);
     while (true) {
         Serial.println("verificando conexion a Wifi y Mqtt en ejecucion");
         reconectWiFi(lcdSemaphore);
-        localTimeSetUp();
-        reconnect(lcdSemaphore); 
-        //sendStoredData();
+        localTimeSetUp(); 
+        reconnect(lcdSemaphore, TaskSendHandle); 
         CheckForMessages();
         vTaskDelay(1000 / portTICK_PERIOD_MS);  // Espera de 1 segundo
     }
@@ -57,6 +62,7 @@ void Task2(void *pvParameters) {
     TickType_t lastSaveTime = lastWakeTime;
     TickType_t lastPublishTime = lastWakeTime;
     const TickType_t publishInterval = 10800000; // 1 horas en milisegundos
+    //const TickType_t publishInterval = 5000; // 1 horas en milisegundos
     const TickType_t saveInterval = 180000; // 3 minutos en milisegundos
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     while (true) {
@@ -96,11 +102,33 @@ void Task2(void *pvParameters) {
     }  
 }
 
+void TaskSendStoredData(void *pvParameters) {
+    while (true) {
+
+        // Espera notificación para ejecutar
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        Serial.println("Tarea de envío activada");
+
+        // Seguridad básica
+        if (isWiFiConnected() && isMQTTConnected()) {
+            sendStoredData();
+        } else {
+            Serial.println("No hay conexión, envío pospuesto");
+        }
+
+        // Pequeño respiro
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+}
+
+
 void setup() {
     Serial.begin(9600); 
     // Crear el semáforo
     wifiSemaphore = xSemaphoreCreateBinary();
     lcdSemaphore= xSemaphoreCreateBinary();
+    spiffsMutex = xSemaphoreCreateMutex();
     if (wifiSemaphore == NULL) {
         Serial.println("Error al crear el semáforo");
     }
@@ -118,7 +146,15 @@ void setup() {
         6000,            // Tamaño de la pila
         NULL,            // Parámetros de la tarea
         2,               // Prioridad de la tarea
-        &Task2Handle,0);   // Handle de la tarea 
+        &Task2Handle,0);   // Handle de la tarea
+    xTaskCreatePinnedToCore(
+        TaskSendStoredData,
+        "Send Stored Data",
+        6000,
+        NULL,
+        1,
+        &TaskSendHandle,1);
+
 }
 
 void loop() {

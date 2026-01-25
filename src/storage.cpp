@@ -1,9 +1,12 @@
+#include "storage.h"
 #include <SPIFFS.h>
 #include <WiFi.h>
 #include <mqtt.h>
 #include <LcdSetUp.h>
 #include <ArduinoJson.h>
 #include <wifiManagerSetUp.h>
+#include "freertos/semphr.h"
+
 #include <vector>
 
 
@@ -71,11 +74,16 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
         Serial.println("Error: Datos inválidos. No se almacenará información.");
         return;
     }
+    if (xSemaphoreTake(spiffsMutex, pdMS_TO_TICKS(200)) != pdTRUE) {
+        Serial.println("No se pudo tomar mutex SPIFFS");
+        return;
+    }
 
     // Abrir el archivo CSV en modo añadir
     File file = SPIFFS.open("/deviceDataSensor.csv", FILE_APPEND);
     if (!file) {
-        Serial.println("Error abriendo archivo CSV.");    
+        Serial.println("Error abriendo archivo CSV.");
+        xSemaphoreGive(spiffsMutex);    
         return;
     }
 
@@ -85,7 +93,7 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
     // Guardar en archivo y cerrar
     file.println(dataLine);
     file.close();
-    
+    xSemaphoreGive(spiffsMutex);
     Serial.println("Datos guardados en CSV: " + dataLine);
 }
 
@@ -188,37 +196,53 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
 }
  */
 void sendStoredData() {
-    // Verificar conexión WiFi y MQTT antes de procesar datos
+
+    // 1. Verificaciones previas
     if (!isWiFiConnected()) {
         Serial.println("Sin conexión WiFi - No se pueden enviar datos almacenados");
         return;
     }
 
     if (!isMQTTConnected()) {
-        Serial.println("Sin conexión MQTT - No se pueden enviar datos almacenados"); 
+        Serial.println("Sin conexión MQTT - No se pueden enviar datos almacenados");
         return;
     }
-    
-    File file = SPIFFS.open("/deviceDataSensor.csv", FILE_READ);
-    if (!file) {
-        Serial.println("No hay datos almacenados para enviar.");
-        return;
-    }
-    
+
+    std::vector<String> fileLines;
     std::vector<String> pendingLines;
     bool allDataSent = true;
 
-    // Leer el archivo línea por línea 
+    // 2. Leer TODO el archivo dentro del mutex
+    if (xSemaphoreTake(spiffsMutex, portMAX_DELAY) != pdTRUE) {
+        Serial.println("No se pudo tomar mutex SPIFFS");
+        return;
+    }
+
+    File file = SPIFFS.open("/deviceDataSensor.csv", FILE_READ);
+    if (!file) {
+        Serial.println("No hay datos almacenados para enviar.");
+        xSemaphoreGive(spiffsMutex);
+        return;
+    }
+
     while (file.available()) {
         String line = file.readStringUntil('\n');
-        line.trim(); // Eliminar espacios y saltos de línea
-        
-        if (line.length() == 0) continue;
+        line.trim();
+        if (line.length() > 0) {
+            fileLines.push_back(line);
+        }
+    }
 
-        // Separar los datos de la línea
+    file.close();
+    xSemaphoreGive(spiffsMutex);
+
+    // 3. Procesar y enviar datos (SIN mutex)
+    for (const String& line : fileLines) {
+
         std::vector<String> values;
         int start = 0;
         int end = line.indexOf(',');
+
         while (end != -1) {
             values.push_back(line.substring(start, end));
             start = end + 1;
@@ -236,13 +260,13 @@ void sendStoredData() {
         int sent = values[5].toInt();
 
         if (sent == 0 && isMQTTConnected()) {
+
             String datePart = values[0];
             String timePart = values[1];
             float tempDHT = values[2].toFloat();
             float humedad = values[3].toFloat();
             float tempDS18B20 = values[4].toFloat();
 
-            // Enviar datos
             if (publishData(datePart, timePart, tempDHT, humedad, tempDS18B20)) {
                 Serial.println("Datos enviados correctamente: " + line);
             } else {
@@ -250,33 +274,39 @@ void sendStoredData() {
                 pendingLines.push_back(line);
                 allDataSent = false;
             }
+
         } else {
             pendingLines.push_back(line);
             allDataSent = false;
         }
     }
-    file.close();
 
-    // Si todos los datos fueron enviados, vaciar el archivo
-    if (allDataSent) {
-        File outFile = SPIFFS.open("/deviceDataSensor.csv", FILE_WRITE);
-        if (outFile) {
-            outFile.println(""); // Escribir un archivo vacío
-            outFile.close();
-        }
-        Serial.println("Todos los datos fueron enviados, archivo vaciado.");
-    } else {
-        // Guardar solo los datos no enviados
-        File outFile = SPIFFS.open("/deviceDataSensor.csv", FILE_WRITE);
-        if (outFile) {
-            for (const String& pendingLine : pendingLines) {
-                outFile.println(pendingLine);
-            }
-            outFile.close();
-            Serial.println("Archivo CSV actualizado con datos pendientes de envío.");
-        }
+    // 4. Escribir nuevamente el archivo (solo lo pendiente)
+    if (xSemaphoreTake(spiffsMutex, portMAX_DELAY) != pdTRUE) {
+        Serial.println("No se pudo tomar mutex SPIFFS para escritura");
+        return;
     }
+
+    File outFile = SPIFFS.open("/deviceDataSensor.csv", FILE_WRITE);
+    if (!outFile) {
+        Serial.println("Error abriendo archivo para escritura");
+        xSemaphoreGive(spiffsMutex);
+        return;
+    }
+
+    if (!allDataSent) {
+        for (const String& pendingLine : pendingLines) {
+            outFile.println(pendingLine);
+        }
+        Serial.println("Archivo actualizado con datos pendientes.");
+    } else {
+        Serial.println("Todos los datos fueron enviados, archivo limpiado.");
+    }
+
+    outFile.close();
+    xSemaphoreGive(spiffsMutex);
 }
+
 
 
 

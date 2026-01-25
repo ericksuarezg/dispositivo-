@@ -78,7 +78,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   displayInfoOnLCD("Mensaje recibido",payloadStr.c_str());
 }
 
-void reconnect(SemaphoreHandle_t lcdSemaphore) {
+void reconnect(SemaphoreHandle_t lcdSemaphore, TaskHandle_t TaskSendHandle) {
   Serial.print("el estado de la conexion mqtt es ");
   Serial.print(client.state());
   if (client.state()!=MQTT_CONNECTED) {
@@ -88,6 +88,9 @@ void reconnect(SemaphoreHandle_t lcdSemaphore) {
           Serial.println("Conectado al servidor MQTT!");
           mqttConnected = true;
           client.subscribe(mqtt_user);
+          if (TaskSendHandle != NULL){
+            xTaskNotifyGive(TaskSendHandle);
+          }
           
 
           if (xSemaphoreTake(lcdSemaphore,2000/portTICK_PERIOD_MS)==pdTRUE){
@@ -121,7 +124,7 @@ void CheckForMessages(){
   client.loop();
 }
 
-void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
+void mqttSetUp(SemaphoreHandle_t lcdSemaphore, TaskHandle_t TaskSendHandle){
   espClientSecure.setInsecure();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
@@ -133,6 +136,9 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore){
     displayInfoOnLCD("   Intentando"," coneccion MQTT");
     vTaskDelay(3000/ portTICK_PERIOD_MS);
     if (client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
+      if (TaskSendHandle != NULL){
+          xTaskNotifyGive(TaskSendHandle);
+        }
       Serial.println("Conectado al servidor MQTT!");
       mqttConnected = true;
       client.subscribe(mqtt_user);
