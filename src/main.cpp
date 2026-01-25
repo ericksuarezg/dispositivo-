@@ -27,8 +27,8 @@ void conectToInternet(void *pvParameters) {
         Serial.println("verificando conexion a Wifi y Mqtt en ejecucion");
         reconectWiFi(lcdSemaphore);
         localTimeSetUp();
-        reconnect(lcdSemaphore);
-        sendStoredData();
+        reconnect(lcdSemaphore); 
+        //sendStoredData();
         CheckForMessages();
         vTaskDelay(1000 / portTICK_PERIOD_MS);  // Espera de 1 segundo
     }
