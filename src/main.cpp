@@ -53,6 +53,7 @@ void Task2(void *pvParameters) {
     float tempDS18Max = 85;
 
     setupSPIFFS();
+    recoverSPIFFSState();
     setUpLcd(wifiSemaphore);
     dthSensorsetUp();
     ds18b20SetUp(lcdSemaphore);
@@ -61,8 +62,8 @@ void Task2(void *pvParameters) {
     TickType_t lastWakeTime = xTaskGetTickCount();
     TickType_t lastSaveTime = lastWakeTime;
     TickType_t lastPublishTime = lastWakeTime;
-    const TickType_t publishInterval = 10800000; // 1 horas en milisegundos
-    //const TickType_t publishInterval = 5000; // 1 horas en milisegundos
+    //const TickType_t publishInterval = 10800000; // 1 horas en milisegundos
+    const TickType_t publishInterval = 5000; // 1 horas en milisegundos
     const TickType_t saveInterval = 180000; // 3 minutos en milisegundos
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     while (true) {

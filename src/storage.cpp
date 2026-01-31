@@ -195,7 +195,7 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
     }
 }
  */
-void sendStoredData() {
+/* void sendStoredData() {
 
     // 1. Verificaciones previas
     if (!isWiFiConnected()) {
@@ -240,7 +240,7 @@ void sendStoredData() {
     for (const String& line : fileLines) {
 
         std::vector<String> values;
-        int start = 0;
+        int start = 0; 
         int end = line.indexOf(',');
 
         while (end != -1) {
@@ -252,8 +252,6 @@ void sendStoredData() {
 
         if (values.size() != 6) {
             Serial.println("Línea con formato incorrecto: " + line);
-            pendingLines.push_back(line);
-            allDataSent = false;
             continue;
         }
 
@@ -304,6 +302,117 @@ void sendStoredData() {
     }
 
     outFile.close();
+    xSemaphoreGive(spiffsMutex);
+}
+
+ */
+
+ void sendStoredData() {
+
+    if (!isWiFiConnected() || !isMQTTConnected()) {
+        Serial.println("Sin conexión - Envío pospuesto");
+        return;
+    }
+
+    std::vector<String> fileLines;
+    std::vector<String> pendingLines;
+
+    // 1️⃣ Leer archivo original
+    if (xSemaphoreTake(spiffsMutex, portMAX_DELAY ) != pdTRUE) {
+        Serial.println("No se pudo tomar mutex SPIFFS");
+        return;
+    }
+
+    if (!SPIFFS.exists("/deviceDataSensor.csv")) {
+        xSemaphoreGive(spiffsMutex);
+        Serial.println("No hay archivo CSV");
+        return;
+    }
+
+    File file = SPIFFS.open("/deviceDataSensor.csv", FILE_READ);
+    while (file.available()) {
+        String line = file.readStringUntil('\n');
+        line.trim();
+        if (line.length() > 0) {
+            fileLines.push_back(line);
+        }
+    }
+    file.close();
+    xSemaphoreGive(spiffsMutex);
+
+    // 2️⃣ Procesar y enviar (sin mutex)
+    for (const String& line : fileLines) {
+
+        std::vector<String> values;
+        int start = 0;
+        int end = line.indexOf(',');
+
+        while (end != -1) {
+            values.push_back(line.substring(start, end));
+            start = end + 1;
+            end = line.indexOf(',', start);
+        }
+        values.push_back(line.substring(start));
+
+        // Línea corrupta → se descarta
+        if (values.size() != 6) {
+            Serial.println("Línea corrupta descartada: " + line);
+            continue;
+        }
+
+        float tempDHT = values[2].toFloat();
+        float humedad = values[3].toFloat();
+        float tempDS18 = values[4].toFloat();
+
+        if (!publishData(values[0], values[1], tempDHT, humedad, tempDS18)) {
+            pendingLines.push_back(line);
+        }
+    }
+
+    // 3️⃣ Escritura segura en archivo temporal
+    if (xSemaphoreTake(spiffsMutex, portMAX_DELAY) != pdTRUE) {
+        Serial.println("No se pudo tomar mutex para escritura");
+        return;
+    }
+
+    File tmpFile = SPIFFS.open("/deviceDataSensor.tmp", FILE_WRITE);
+    if (!tmpFile) {
+        xSemaphoreGive(spiffsMutex);
+        Serial.println("Error creando archivo temporal");
+        return;
+    }
+
+    for (const String& pending : pendingLines) {
+        tmpFile.println(pending);
+    }
+
+    tmpFile.close();
+
+    // 4️⃣ Commit atómico
+    SPIFFS.remove("/deviceDataSensor.csv");
+    SPIFFS.rename("/deviceDataSensor.tmp", "/deviceDataSensor.csv");
+
+    xSemaphoreGive(spiffsMutex);
+
+    Serial.println("Envío completado y estado guardado de forma segura");
+}
+
+void recoverSPIFFSState() {
+
+    if (xSemaphoreTake(spiffsMutex, portMAX_DELAY) != pdTRUE) {
+        Serial.println("No se pudo tomar mutex SPIFFS para recuperación");
+        return;
+    }
+
+    if (SPIFFS.exists("/deviceDataSensor.tmp")) {
+        Serial.println("Archivo temporal detectado. Recuperando estado...");
+
+        SPIFFS.remove("/deviceDataSensor.csv");
+        SPIFFS.rename("/deviceDataSensor.tmp", "/deviceDataSensor.csv");
+
+        Serial.println("Recuperación completada.");
+    }
+
     xSemaphoreGive(spiffsMutex);
 }
 

@@ -6,21 +6,23 @@
 #include <timeSetUp.h>
 #include <storage.h>
 #include <WiFiClientSecure.h>
+#include "hmac_utils.h"
 
 #define MAX_BUFFER_SIZE 512  // Modifica este valor según lo que necesites
 
 
-//WiFiClient espClient;
-//PubSubClient client(espClient);
-WiFiClientSecure espClientSecure;
-PubSubClient client(espClientSecure);
+WiFiClient espClient;
+PubSubClient client(espClient);
+//WiFiClientSecure espClientSecure;
+//PubSubClient client(espClientSecure);
 
-//const char * mqtt_server= "192.168.18.10";// local
-const char * mqtt_server= "aguisu.com";
+const char * mqtt_server= "192.168.128.15";// local
+//const char * mqtt_server= "aguisu.com";
 //const char* mqtt_user = "Studio23"; // camila ramos 
 //const char* mqtt_user = "Termo8936"; // gladis prueba 
 //const char* mqtt_user = "TermoOdontocenter01"; // LM odontocenter odontologia general  
-const char* mqtt_user = "TermoOrtegon01"; // ortegon
+//const char* mqtt_user = "TermoOrtegon01"; // ortegon
+const char* mqtt_user = "Ericson21"; // local
 //const char* mqtt_user = "TermoOdontocenter02"; // LM odontocenter insumos  
 //const char* mqtt_user = "LicethFig2025"; //liceht figeroa (annie) 
 //const char* mqtt_user = "Fabionoe2025"; // fabio noe 
@@ -34,7 +36,8 @@ const char* mqtt_user = "TermoOrtegon01"; // ortegon
 //const char* mqtt_password = "Studio23"; // camila Ramos 
 //const char* mqtt_password = "Termo2023";//gladis prueba
 //const char* mqtt_password = "TermoOdontocenter01";//Lm dodontocentergeneral
-const char* mqtt_password = "TermoOrtegon01";//ortegon
+//const char* mqtt_password = "TermoOrtegon01";//ortegon
+const char* mqtt_password = "Ericson21";//local
 //const char* mqtt_password = "TermoOdontocenter02";//Lm dodontocenter insumos
 //const char* mqtt_password = "LicethFig2025";//liceth figueroa (Annie)
 //const char* mqtt_password = "Fabionoe2025";//fabio noe
@@ -48,7 +51,8 @@ const char* mqtt_password = "TermoOrtegon01";//ortegon
 //const char* mqtt_client_id = "679a32069fe20cce0f68ad9f";// camila Ramos
 //const char* mqtt_client_id = "6680422a40a2bf513dbce2df";// Gladis prueba 
 //const char* mqtt_client_id = "68336c73a921582ebf58e1a6";// LM ododntocenter generales 
-const char* mqtt_client_id = "68a71a796a866ba7182a4cf1";// ortegon
+//const char* mqtt_client_id = "68a71a796a866ba7182a4cf1";// ortegon
+const char* mqtt_client_id = "67a8ddb447aa0a717b060a15";// local
 //const char* mqtt_client_id = "6833706ca921582ebf58e1e0";// LM ododntocenter insumos 
 //const char* mqtt_client_id = "682e9194a921582ebf58d455";// liceth figeroa  
 //const char* mqtt_client_id = "67f6d26fa921582ebf5851f3";// fabio noe 
@@ -60,8 +64,8 @@ const char* mqtt_client_id = "68a71a796a866ba7182a4cf1";// ortegon
 //const char* mqtt_client_id = "67c4a1d22a4d94d4af7d43be";// Santa Maria
 //const char* mqtt_client_id = "67a8f727dabe7a7d86f62150";// Mauricio Mendez  
 //const int mqtt_port = 7080; 
-const int mqtt_port = 8884; // mqtts
-//const int mqtt_port = 3251; // puerto local
+//const int mqtt_port = 8884; // mqtts
+const int mqtt_port = 3251; // puerto local
 
 bool mqttConnected = false;
 
@@ -125,7 +129,7 @@ void CheckForMessages(){
 }
 
 void mqttSetUp(SemaphoreHandle_t lcdSemaphore, TaskHandle_t TaskSendHandle){
-  espClientSecure.setInsecure();
+  //espClientSecure.setInsecure();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
   client.setKeepAlive(60); // Configura un Keep-Alive de 60 segundos
@@ -158,7 +162,7 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore, TaskHandle_t TaskSendHandle){
   xSemaphoreGive(lcdSemaphore); 
 }
 
-bool publishData(String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18) {
+ bool publishData(String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18) {
     Serial.print(temperaturaDS18);
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
@@ -171,10 +175,17 @@ bool publishData(String date, String time, float temperaturaDHT, float humedadRe
     // Convertir mqtt_client_id a String si no es ya un String
     String clientId = String(mqtt_client_id);
 
+    // Obtener chipId físico
+    uint64_t chipMac = ESP.getEfuseMac();
+    String chipId = String((uint32_t)(chipMac >> 32), HEX) + String((uint32_t)chipMac, HEX);
+    chipId.toUpperCase();
+    chipId = "ESP32-" + chipId;
+    
     // Crear manualmente el JSON como cadena
     String jsonString = "{";
     jsonString += "\"typeMessage\":\"messageCurrent\",";
     jsonString += "\"deviceId\":\"" + clientId + "\",";
+    jsonString += "\"chipId\":\"" + chipId + "\",";   // 👈 AQUÍ
     jsonString += "\"data\":{";
     jsonString += "\"header\":[";
     jsonString += "\"Fecha lectura\",";
@@ -193,10 +204,29 @@ bool publishData(String date, String time, float temperaturaDHT, float humedadRe
     jsonString += "}";
     jsonString += "}";
 
+    //firma del protocolo HMAC
+    String hmac = generateHMAC(jsonString);
+    jsonString.remove(jsonString.length() - 1); // quita }
+    jsonString += ",\"hmac\":\"" + hmac + "\"}";
+
+
+
     // Imprimir la cadena JSON que se enviará
     Serial.println("ESTO ES LO QUE VOY A ENVIAR: " + jsonString);
+    Serial.println("Bytes usados para HMAC:");
+    for (size_t i = 0; i < jsonString.length(); i++) {
+        Serial.printf("%02x ", jsonString[i]);
+    }
+    Serial.println();
+
+    
+
+
 
     // Publicar el mensaje en el tema deseado
+    Serial.println("JSON final con HMAC:");
+    Serial.println(jsonString);
+
     Serial.println("Tamaño del mensaje JSON: " + String(jsonString.length()));
     bool result = client.publish(mqtt_client_id, jsonString.c_str());
 
@@ -207,7 +237,11 @@ bool publishData(String date, String time, float temperaturaDHT, float humedadRe
         Serial.println("Error al publicar el mensaje.");
         return false;
     }
-} 
+}   
+  
+
+ 
+
 /* bool publishData(String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18) {
     Serial.print(temperaturaDS18);
     delay(100);
