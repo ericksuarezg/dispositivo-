@@ -8,6 +8,7 @@
 #include "freertos/semphr.h" 
 #include <storage.h>
 #include <alert.h>
+#include "PublishingInit.h"
 
 
 // Definir los "handle" de las tareas
@@ -62,8 +63,8 @@ void Task2(void *pvParameters) {
     TickType_t lastWakeTime = xTaskGetTickCount();
     TickType_t lastSaveTime = lastWakeTime;
     TickType_t lastPublishTime = lastWakeTime;
-    //const TickType_t publishInterval = 10800000; // 1 horas en milisegundos
-    const TickType_t publishInterval = 5000; // 1 horas en milisegundos
+    const TickType_t publishInterval = 10800000; // 1 horas en milisegundos
+    //const TickType_t publishInterval = 5000; // 1 horas en milisegundos
     const TickType_t saveInterval = 180000; // 3 minutos en milisegundos
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     while (true) {
@@ -113,7 +114,7 @@ void TaskSendStoredData(void *pvParameters) {
 
         // Seguridad básica
         if (isWiFiConnected() && isMQTTConnected()) {
-            sendStoredData();
+            //sendStoredData();
         } else {
             Serial.println("No hay conexión, envío pospuesto");
         }
@@ -126,6 +127,7 @@ void TaskSendStoredData(void *pvParameters) {
 
 void setup() {
     Serial.begin(9600); 
+    initPublishing();
     // Crear el semáforo
     wifiSemaphore = xSemaphoreCreateBinary();
     lcdSemaphore= xSemaphoreCreateBinary();
