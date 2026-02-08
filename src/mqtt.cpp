@@ -288,7 +288,7 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore, TaskHandle_t TaskSendHandle){
     int retryCount = 0;
     bool result = false;
     while (retryCount < maxRetries && !result) {
-        result = client.publish(mqtt_client_id, jsonString.c_str());
+        result = client.publish(mqtt_client_id, jsonString.c_str()); 
         if (!result) {
             retryCount++;
             Serial.println("Error al publicar, reintentando... #" + String(retryCount));
@@ -298,9 +298,80 @@ void mqttSetUp(SemaphoreHandle_t lcdSemaphore, TaskHandle_t TaskSendHandle){
 
     // 7️⃣ Actualizar secuencia si se publicó
     if (result) {
-        lastSequence++;
-        nvs.putUInt("lastSeq", lastSequence);
+        if (xSemaphoreTake(sequenceMutex, portMAX_DELAY) == pdTRUE) {
+          lastSequence++;
+          nvs.putUInt("lastSeq", lastSequence);
+          xSemaphoreGive(sequenceMutex);
+        }
         Serial.println("Mensaje publicado correctamente. Sequence ahora: " + String(lastSequence));
+        return true;
+    } else {
+        Serial.println("Error al publicar después de varios intentos. Mantener en buffer para reintento futuro.");
+        return false;
+    }
+}
+ 
+
+bool publishStorageData(String date, String time, float temperaturaDHT, float humedadRelativa, float temperaturaDS18, uint32_t secuence) {
+    Serial.print(temperaturaDS18);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+
+    // 1️⃣ Verificar si los datos son válidos
+    if (isnan(temperaturaDHT) || isnan(humedadRelativa) || isnan(temperaturaDS18) || temperaturaDS18 == -127) {
+        Serial.println("Error: Datos inválidos. No se publicará información.");
+        return false;
+    }
+
+    String clientId = String(mqtt_client_id);
+
+    // 2️⃣ Obtener chipId físico
+    uint64_t chipMac = ESP.getEfuseMac();
+    String chipId = String((uint32_t)(chipMac >> 32), HEX) + String((uint32_t)chipMac, HEX);
+    chipId.toUpperCase();
+    chipId = "ESP32-" + chipId;
+
+    Serial.println("EWTA ES LA SECUENCIA  DESDE EL  MQTT: " + secuence );
+
+    // 3️⃣ Construir JSON con sequence y validation
+    String validation = chipId + "-" + String(secuence); // marca de validación
+
+    String jsonString = "{";
+    jsonString += "\"typeMessage\":\"messageCurrent\",";
+    jsonString += "\"deviceId\":\"" + clientId + "\",";
+    jsonString += "\"chipId\":\"" + chipId + "\",";
+    jsonString += "\"sequence\":" + String(secuence ) + ",";
+    jsonString += "\"data\":{";
+    jsonString += "\"header\":[\"Fecha lectura\",\"Hora de lectura\",\"temperatura Almacen\",\"humedad Almacen\",\"temperatura Nevera\",\"validation\"],";
+    jsonString += "\"body\":[\"" + date + "\",\"" + time + "\"," + String(temperaturaDHT) + "," + String(humedadRelativa) + "," + String(temperaturaDS18) + ",\"" + validation + "\"]}";
+    jsonString += "}"; // ✅ cierra "data"
+    
+    // 4️⃣ Generar HMAC
+    String hmac = generateHMAC(jsonString);
+    
+    // Agregar HMAC fuera de "data"
+    jsonString.remove(jsonString.length() - 1); // quita } final del JSON
+    jsonString += ",\"hmac\":\"" + hmac + "\"}"; // ✅ hmac fuera de data
+
+    // 5️⃣ Imprimir JSON
+    Serial.println("esta es la secuancia en el almacenamiento : ");
+    Serial.println(secuence);
+
+    // 6️⃣ Publicar con reintentos
+    const int maxRetries = 5;
+    int retryCount = 0;
+    bool result = false;
+    while (retryCount < maxRetries && !result) {
+        result = client.publish(mqtt_client_id, jsonString.c_str()); 
+        if (!result) {
+            retryCount++;
+            Serial.println("Error al publicar, reintentando... #" + String(retryCount));
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+        }
+    }
+
+    // 7️⃣ Actualizar secuencia si se publicó
+    if (result) {
+        Serial.println("Mensaje publicado correctamente" );
         return true;
     } else {
         Serial.println("Error al publicar después de varios intentos. Mantener en buffer para reintento futuro.");

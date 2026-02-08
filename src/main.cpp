@@ -24,6 +24,9 @@ SemaphoreHandle_t wifiSemaphore;
 SemaphoreHandle_t lcdSemaphore;
 //semaforo para controlar el acceso a SPIFF 
 SemaphoreHandle_t spiffsMutex;
+// semaforo paea controlar la la secuencia de envios de datos 
+SemaphoreHandle_t sequenceMutex;
+
 
 // Función para la primera tarea
 void conectToInternet(void *pvParameters) {
@@ -63,8 +66,8 @@ void Task2(void *pvParameters) {
     TickType_t lastWakeTime = xTaskGetTickCount();
     TickType_t lastSaveTime = lastWakeTime;
     TickType_t lastPublishTime = lastWakeTime;
-    const TickType_t publishInterval = 10800000; // 1 horas en milisegundos
-    //const TickType_t publishInterval = 5000; // 1 horas en milisegundos
+    //const TickType_t publishInterval = 10800000; // 1 horas en milisegundos
+    const TickType_t publishInterval = 5000; // 1 horas en milisegundos
     const TickType_t saveInterval = 180000; // 3 minutos en milisegundos
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     while (true) {
@@ -94,7 +97,14 @@ void Task2(void *pvParameters) {
                 //saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
             } else {
                 Serial.println("Sin conexión - Datos guardados para envío posterior");
-                saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
+                if (saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, lastSequence+1)){
+                    if (xSemaphoreTake(sequenceMutex, portMAX_DELAY) == pdTRUE) {
+                    lastSequence++;
+                    nvs.putUInt("lastSeq", lastSequence);
+                    xSemaphoreGive(sequenceMutex);
+                   }
+                }    
+                
             }
             lastPublishTime = xTaskGetTickCount();
         }    
@@ -114,7 +124,7 @@ void TaskSendStoredData(void *pvParameters) {
 
         // Seguridad básica
         if (isWiFiConnected() && isMQTTConnected()) {
-            //sendStoredData();
+            sendStoredData();
         } else {
             Serial.println("No hay conexión, envío pospuesto");
         }
@@ -132,6 +142,8 @@ void setup() {
     wifiSemaphore = xSemaphoreCreateBinary();
     lcdSemaphore= xSemaphoreCreateBinary();
     spiffsMutex = xSemaphoreCreateMutex();
+    sequenceMutex = xSemaphoreCreateMutex();
+
     if (wifiSemaphore == NULL) {
         Serial.println("Error al crear el semáforo");
     }

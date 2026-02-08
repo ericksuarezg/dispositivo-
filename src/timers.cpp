@@ -8,7 +8,9 @@
 #include "storage.h"
 #include "mqtt.h"
 #include "WiFiManager.h"
-#include <SPIFFS.h>
+//#include <SPIFFS.h>
+#include "LittleFS.h"
+#include "PublishingInit.h"
 //#include <Ticker.h>
 
 bool initTimers= false;
@@ -67,18 +69,21 @@ void tareaProgramada1() {
     
     // Verificar conexión WiFi y MQTT antes de publicar
     if (WiFi.status() == WL_CONNECTED && isMQTTConnected()) {
-        publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
-        Serial.println("Datos publicados exitosamente");
-    } else {
-        Serial.println("Sin conexión - Guardando datos para envío posterior");
-        saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
+      publishData(getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20);
+      Serial.println("Datos publicados exitosamente");
+    } 
+    else {
+      Serial.println("Sin conexión - Guardando datos para envío posterior");
+      if (saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, lastSequence+1)){
+        lastSequence++;
+        nvs.putUInt("lastSeq", lastSequence);
+       }   
+      Serial.println("------------------------");
+      timerTask1.once(24*60*60, tareaProgramada1);
+      Serial.println("Tarea reprogramada para mañana a las 05:06:00 AM");
+      Serial.println("----------------------------------------");
     }
-    Serial.println("------------------------");
-    timerTask1.once(24*60*60, tareaProgramada1);
-    Serial.println("Tarea reprogramada para mañana a las 05:06:00 AM");
-    Serial.println("----------------------------------------");
 }
-
 void tareaProgramada2() {
   Serial.println("Ejecutando tarea programada a las 05:09 AM");
     float temperatureCDs18b20;
@@ -110,7 +115,10 @@ void tareaProgramada2() {
         Serial.println("Datos publicados exitosamente");
     } else {
         Serial.println("Sin conexión - Guardando datos para envío posterior");
-        saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
+        if (saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, lastSequence+1)){
+          lastSequence++;
+          nvs.putUInt("lastSeq", lastSequence);
+        }  
     }
     Serial.println("----------------------------------------");
     timerTask2.once(24*60*60, tareaProgramada2);
@@ -149,7 +157,10 @@ void tareaProgramada3() {
         Serial.println("Datos publicados exitosamente");
     } else {
         Serial.println("Sin conexión - Guardando datos para envío posterior");
-        saveDataToCSV("", getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, 0);
+        if (saveDataToCSV(payload, getDateSeparate(), getTimeSeparate(), temperaturaDHT, humedad, temperatureCDs18b20, lastSequence+1)){
+          lastSequence++;
+          nvs.putUInt("lastSeq", lastSequence);
+       }  
     }
     Serial.println("----------------------------------------");
     timerTask3.once(24*60*60, tareaProgramada3);

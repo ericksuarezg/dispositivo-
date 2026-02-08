@@ -1,6 +1,7 @@
 #include "hmac_utils.h"
 #include "mbedtls/md.h"
 
+//static const char* SECRET_KEY = "AGUISU_ARMONIA_KEY_2026";
 static const char* SECRET_KEY = "AGUISU_CORE_KEY_2026";
 
 String generateHMAC(const String& payload) {

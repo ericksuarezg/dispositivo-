@@ -3,6 +3,8 @@
 Preferences nvs;
 uint32_t lastSequence = 0;
 String sessionId = "";
+uint32_t lastConfirmedSequence = 0;
+
 
 // Inicialización de NVS y sesión
 void initPublishing() {

@@ -1,22 +1,24 @@
 #include "storage.h"
-#include <SPIFFS.h>
+//#include <SPIFFS.h>
 #include <WiFi.h>
 #include <mqtt.h>
 #include <LcdSetUp.h>
 #include <ArduinoJson.h>
 #include <wifiManagerSetUp.h>
 #include "freertos/semphr.h"
+#include "PublishingInit.h"
+#include "LittleFS.h"
 
 #include <vector>
 
 
 void setupSPIFFS() {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    if (!SPIFFS.begin(true)) {
+    if (!LittleFS.begin(true)) {
         Serial.println("Error inicializando SPIFFS");
         return;
     }
-    Serial.println("SPIFFS Configurado exitosamente.");
+    Serial.println("LittleFS Configurado exitosamente.");
 
 }
 
@@ -68,7 +70,7 @@ void setupSPIFFS() {
 }
  */
 
-void saveDataToCSV(String payload, String datePart, String timePart, float tempDHT, float humedad, float tempDS18B20, int toSend) {
+/* void saveDataToCSV(String payload, String datePart, String timePart, float tempDHT, float humedad, float tempDS18B20, int toSend) {
     // Validar datos de los sensores
     if (isnan(tempDHT) || isnan(humedad) || isnan(tempDS18B20) || tempDS18B20 == -127) {
         Serial.println("Error: Datos inválidos. No se almacenará información.");
@@ -95,7 +97,46 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
     file.close();
     xSemaphoreGive(spiffsMutex);
     Serial.println("Datos guardados en CSV: " + dataLine);
+} */
+bool saveDataToCSV(String payload, String datePart, String timePart, float tempDHT, float humedad, float tempDS18B20,int sequence) {
+    // 1️⃣ Validación de datos
+    if (isnan(tempDHT) || isnan(humedad) || isnan(tempDS18B20) || tempDS18B20 == -127) {
+        Serial.println("Datos inválidos");
+        return false;
+    }
+    
+    // 2️⃣ Tomar mutex (bloqueante, porque el dato es crítico)
+    if (xSemaphoreTake(spiffsMutex, portMAX_DELAY) != pdTRUE) {
+        return false;
+    }
+
+    // 3️⃣ Abrir archivo
+    File file = LittleFS.open("/deviceDataSensor.csv", FILE_APPEND);
+    if (!file) {
+        xSemaphoreGive(spiffsMutex);
+        return false;
+    }
+
+    // 4️⃣ Construir línea CSV INMUTABLE
+    // fecha,hora,tempDHT,humedad,tempDS18,sequence
+    String dataLine =
+        datePart + "," +
+        timePart + "," +
+        String(tempDHT) + "," +
+        String(humedad) + "," +
+        String(tempDS18B20) + "," +
+        String(sequence) + "," + "0";  // 👈 aquí vive la sequence
+
+    bool ok = file.println(dataLine);
+
+    // 5️⃣ Cerrar y liberar
+    file.close();
+    xSemaphoreGive(spiffsMutex);
+
+    return ok;
 }
+
+
 
 /* void sendStoredData() {
     File file = SPIFFS.open("/deviceDataSensor.csv", FILE_READ);
@@ -307,7 +348,7 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
 
  */
 
- void sendStoredData() {
+ /* void sendStoredData() {
 
     if (!isWiFiConnected() || !isMQTTConnected()) {
         Serial.println("Sin conexión - Envío pospuesto");
@@ -395,7 +436,91 @@ void saveDataToCSV(String payload, String datePart, String timePart, float tempD
     xSemaphoreGive(spiffsMutex);
 
     Serial.println("Envío completado y estado guardado de forma segura");
+} */
+bool sendStoredData() {
+
+    if (!isWiFiConnected() || !isMQTTConnected()) {
+        return false;
+    }
+
+    if (xSemaphoreTake(spiffsMutex, portMAX_DELAY) != pdTRUE) {
+        return false;
+    }
+
+    if (!LittleFS.exists("/deviceDataSensor.csv")) {
+        xSemaphoreGive(spiffsMutex);
+        return false;
+    }
+
+    File file = LittleFS.open("/deviceDataSensor.csv", FILE_READ);
+    if (!file) {
+        xSemaphoreGive(spiffsMutex);
+        return false;
+    }
+
+    lastConfirmedSequence = nvs.getUInt("lastConfirmedSeq", 0);
+    uint32_t maxSequenceInFile = 0;
+    bool sentSomething = false;
+
+    while (file.available()) {
+
+        String line = file.readStringUntil('\n');
+        line.trim();
+        if (line.isEmpty()) continue;
+
+        char buffer[128];
+        if (line.length() >= sizeof(buffer)) continue;
+        line.toCharArray(buffer, sizeof(buffer));
+
+        char *token = strtok(buffer, ","); if (!token) continue;
+        String date = token;
+
+        token = strtok(NULL, ","); if (!token) continue;
+        String time = token;
+
+        token = strtok(NULL, ","); if (!token) continue;
+        float tempDHT = atof(token);
+
+        token = strtok(NULL, ","); if (!token) continue;
+        float humedad = atof(token);
+
+        token = strtok(NULL, ","); if (!token) continue;
+        float tempDS18 = atof(token);
+
+        token = strtok(NULL, ","); if (!token) continue;
+        uint32_t sequence = atoi(token);
+
+        Serial.println("esta es la secuancia en el almacenamiento : ");
+        Serial.println(sequence);
+
+        maxSequenceInFile = max(maxSequenceInFile, sequence);
+
+        if (sequence <= lastConfirmedSequence) {
+            continue;
+        }
+
+        if (!publishStorageData(date, time, tempDHT, humedad, tempDS18, sequence)) {
+            break;
+        }
+
+        lastConfirmedSequence = sequence;
+        nvs.putUInt("lastConfirmedSeq", lastConfirmedSequence);
+        sentSomething = true;
+    }
+
+    file.close();
+
+    // 🧹 Eliminación SEGURA
+    if (maxSequenceInFile > 0 && maxSequenceInFile <= lastConfirmedSequence) {
+        Serial.println("Todos los datos confirmados. Eliminando archivo.");
+        LittleFS.remove("/deviceDataSensor.csv");
+    }
+
+    xSemaphoreGive(spiffsMutex);
+    return sentSomething;
 }
+
+
 
 void recoverSPIFFSState() {
 
@@ -404,11 +529,11 @@ void recoverSPIFFSState() {
         return;
     }
 
-    if (SPIFFS.exists("/deviceDataSensor.tmp")) {
+    if (LittleFS.exists("/deviceDataSensor.tmp")) {
         Serial.println("Archivo temporal detectado. Recuperando estado...");
 
-        SPIFFS.remove("/deviceDataSensor.csv");
-        SPIFFS.rename("/deviceDataSensor.tmp", "/deviceDataSensor.csv");
+        LittleFS.remove("/deviceDataSensor.csv");
+        LittleFS.rename("/deviceDataSensor.tmp", "/deviceDataSensor.csv");
 
         Serial.println("Recuperación completada.");
     }

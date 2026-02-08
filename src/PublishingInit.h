@@ -8,6 +8,8 @@
 extern Preferences nvs;
 extern uint32_t lastSequence;
 extern String sessionId;
+extern uint32_t lastConfirmedSequence;
+
 
 // Función de inicialización
 void initPublishing();
